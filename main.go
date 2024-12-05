@@ -46,6 +46,12 @@ func main() {
 				Y = (Y + 1) % board.BOARD_SIZE
 			case tcell.KeyEnter:
 				if isSelected {
+
+					if !game.SequentialMoveCheck(X, Y, selectedX, selectedY) {
+						isSelected = false
+						break
+					}
+
 					if board.MovePiece(selectedX, selectedY, X, Y, screen) {
 						isSelected = false
 
@@ -65,8 +71,6 @@ func main() {
 		case *tcell.EventResize:
 			screen.Sync()
 		}
-
-		//
 
 		deathValues := game.DeathCheck()
 

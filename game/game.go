@@ -4,7 +4,7 @@ import (
 	"main/board"
 )
 
-var preMoveMemory = make([]int, 2)
+var preMoveMemory = []int{0, 0}
 
 var firstMove = true
 
@@ -14,6 +14,22 @@ func DeathCheck() [][2]int {
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
+
+			//between the different pieces
+
+			if j > 0 && j < board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE {
+					return [][2]int{{i, j}}
+				}
+			}
+
+			if i > 0 && i < board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE {
+					return [][2]int{{i, j}}
+				}
+			}
 
 			//upper border four piece
 			if i == 0 {
@@ -142,7 +158,6 @@ func DeathCheck() [][2]int {
 					return [][2]int{{i, j}}
 				}
 			}
-
 		}
 	}
 
@@ -150,6 +165,20 @@ func DeathCheck() [][2]int {
 }
 
 func SwitchTurn(currentPlayer *board.Element) {
+	if board.CircleNum == 1 && *currentPlayer == board.CIRCLE {
+		*currentPlayer = board.TRIANGLE
+		turnCounter += 2
+		firstMove = true
+		return
+	}
+
+	if board.TriangleNum == 1 && *currentPlayer == board.TRIANGLE {
+		*currentPlayer = board.CIRCLE
+		turnCounter += 2
+		firstMove = true
+		return
+	}
+
 	turnCounter++
 
 	if turnCounter%2 == 0 {
@@ -160,9 +189,10 @@ func SwitchTurn(currentPlayer *board.Element) {
 		}
 		firstMove = true
 	}
+
 }
 
-func SequentialMoveCheck(X, Y int) bool { // can't move already played piece
+func SequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move already played piece
 	if firstMove {
 		preMoveMemory[0] = X
 		preMoveMemory[1] = Y
@@ -170,7 +200,7 @@ func SequentialMoveCheck(X, Y int) bool { // can't move already played piece
 		return true
 	}
 
-	if preMoveMemory[0] == X && preMoveMemory[1] == Y {
+	if preMoveMemory[0] == selectedX && preMoveMemory[1] == selectedY {
 		return false
 	}
 

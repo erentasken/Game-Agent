@@ -10,6 +10,9 @@ const (
 	BOARD_SIZE = 7
 )
 
+var CircleNum = 4
+var TriangleNum = 4
+
 type Element int
 
 const (
@@ -104,6 +107,12 @@ func MovePiece(X, Y, targetX, targetY int, screen tcell.Screen) bool {
 
 func RemovePiece(deathValues [][2]int) {
 	for _, v := range deathValues {
+		if Board[v[0]][v[1]] == TRIANGLE {
+			TriangleNum--
+		} else {
+			CircleNum--
+		}
+
 		Board[v[0]][v[1]] = EMPTY
 	}
 }
