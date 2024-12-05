@@ -1,14 +1,18 @@
 package game
 
 import (
+	"fmt"
 	"main/board"
+
+	"github.com/gdamore/tcell/v2"
 )
 
 var preMoveMemory = []int{0, 0}
 
 var firstMove = true
 
-var turnCounter = 0
+var turnCounter = 0  // its for per move for each player game logic.
+var roundCounter = 0 // its real move counter
 
 func DeathCheck() [][2]int {
 
@@ -168,6 +172,7 @@ func SwitchTurn(currentPlayer *board.Element) {
 	if board.CircleNum == 1 && *currentPlayer == board.CIRCLE {
 		*currentPlayer = board.TRIANGLE
 		turnCounter += 2
+		roundCounter++
 		firstMove = true
 		return
 	}
@@ -175,11 +180,13 @@ func SwitchTurn(currentPlayer *board.Element) {
 	if board.TriangleNum == 1 && *currentPlayer == board.TRIANGLE {
 		*currentPlayer = board.CIRCLE
 		turnCounter += 2
+		roundCounter++
 		firstMove = true
 		return
 	}
 
 	turnCounter++
+	roundCounter++
 
 	if turnCounter%2 == 0 {
 		if *currentPlayer == board.TRIANGLE {
@@ -205,4 +212,66 @@ func SequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move al
 	}
 
 	return true
+}
+
+func GameOverCheck(screen tcell.Screen) bool {
+	if board.CircleNum == 0 {
+		info := "TRIANGLE WINS"
+		for i, r := range info {
+			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)
+		}
+		screen.Show()
+
+		for {
+			ev := screen.PollEvent()
+			switch ev := ev.(type) {
+			case *tcell.EventKey:
+				switch ev.Key() {
+				case tcell.KeyEscape:
+					return true // Exit on ESC
+				}
+			}
+		}
+	}
+
+	if board.TriangleNum == 0 {
+		info := "CIRCLE WINS"
+		for i, r := range info {
+			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)
+		}
+		screen.Show()
+
+		for {
+			ev := screen.PollEvent()
+			switch ev := ev.(type) {
+			case *tcell.EventKey:
+				switch ev.Key() {
+				case tcell.KeyEscape:
+					return true // Exit on ESC
+				}
+			}
+		}
+	}
+
+	fmt.Print(roundCounter)
+
+	if roundCounter == 50 {
+		info := "DRAW"
+		for i, r := range info {
+			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)
+		}
+		screen.Show()
+		for {
+			ev := screen.PollEvent()
+			switch ev := ev.(type) {
+			case *tcell.EventKey:
+				switch ev.Key() {
+				case tcell.KeyEscape:
+					return true // Exit on ESC
+				}
+			}
+		}
+	}
+
+	return false
 }
