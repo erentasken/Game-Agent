@@ -13,9 +13,52 @@ var firstMove = true
 
 var turnCounter = 0 // its for per move for each player game logic.
 
-var CurrentPlayer = board.TRIANGLE
+var CurrentPlayer = board.EMPTY
 
-func DeathCheck() [][2]int {
+type Action struct {
+	FromX, FromY, ToX, ToY int
+}
+
+func GetPossibleActions(entity board.Element) []Action {
+
+	var actionList []Action
+
+	for i := 0; i < board.BOARD_SIZE; i++ {
+		for j := 0; j < board.BOARD_SIZE; j++ {
+			if board.Board[i][j] == entity {
+				//Move to right
+				if ValidMoveCheck(i, j, i, j+1) {
+					actionList = append(actionList, Action{i, j, i, j + 1})
+				}
+
+				//Move to left
+				if ValidMoveCheck(i, j, i, j-1) {
+					actionList = append(actionList, Action{i, j, i, j - 1})
+				}
+
+				//Move to up
+				if ValidMoveCheck(i, j, i-1, j) {
+					actionList = append(actionList, Action{i, j, i - 1, j})
+				}
+
+				//Move to down
+				if ValidMoveCheck(i, j, i+1, j) {
+					actionList = append(actionList, Action{i, j, i + 1, j})
+				}
+			}
+		}
+	}
+	return actionList
+}
+
+func DeathCheck() {
+	deathValues := deathCoordinates()
+	if deathValues[0] != [2]int{-1, -1} {
+		board.RemovePiece(deathValues)
+	}
+}
+
+func deathCoordinates() [][2]int {
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
@@ -219,11 +262,26 @@ func DeathCheck() [][2]int {
 	return [][2]int{{-1, -1}}
 }
 
-func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) {
+func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
+	if CurrentPlayer == board.EMPTY {
+		switch board.Board[fromX][fromY] {
+		case board.CIRCLE:
+			CurrentPlayer = board.CIRCLE
+		case board.TRIANGLE:
+			CurrentPlayer = board.TRIANGLE
+		}
+	}
+
 	if ValidMoveCheck(fromX, fromY, X, Y) && sequentialMoveCheck(X, Y, fromX, fromY) {
 		board.MovePiece(fromX, fromY, X, Y, screen)
+		board.RenderBoard(screen, X, Y, CurrentPlayer)
+
 		switchTurnControl()
+		return true
+	} else {
+		return false
 	}
+
 }
 
 func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid move
@@ -260,6 +318,7 @@ func switchTurnControl() {
 		turnCounter += 2
 		board.RoundCounter++
 		firstMove = true
+
 		return
 	}
 

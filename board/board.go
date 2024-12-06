@@ -1,6 +1,7 @@
 package board
 
 import (
+	"os"
 	"strconv"
 
 	"github.com/gdamore/tcell/v2"
@@ -66,14 +67,17 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 				style = style.Background(tcell.ColorGray)
 			}
 
-			// Highlight current player's pieces
-			if Board[i][j] == currentPlayer {
+			// if Board[i][j] == currentPlayer {
+			// 	style = style.Foreground(tcell.ColorYellow)
+			// }
+
+			if Board[i][j] == CIRCLE && Board[i][j] == TRIANGLE {
 				style = style.Foreground(tcell.ColorYellow)
 			}
 
 			// Set cell content with proper padding
 			runes := []rune(ch)
-			screen.SetContent(j*cellWidth, i, runes[0], nil, style)
+			screen.SetContent(j*cellWidth, i, runes[0], nil, style.Foreground(tcell.ColorYellow))
 			for k := 1; k < cellWidth; k++ {
 				screen.SetContent(j*cellWidth+k, i, ' ', nil, style)
 			}
@@ -156,6 +160,8 @@ func EndGameDisplay(info string, screen tcell.Screen) {
 			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
 		}
 		screen.Show()
+
+		os.Exit(0)
 
 		for {
 			ev := screen.PollEvent()

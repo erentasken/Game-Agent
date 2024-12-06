@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	agent "main/Agent"
 	"main/board"
 	"main/game"
 	"os"
@@ -17,33 +18,32 @@ func playerInteraction(screen tcell.Screen) {
 	ev := screen.PollEvent()
 	switch ev := ev.(type) {
 	case *tcell.EventKey:
-		switch ev.Key() {
-		case tcell.KeyEscape:
+		if ev.Key() == tcell.KeyEscape {
 			screen.Fini()
-			os.Exit(0)
-			return // Exit on ESC
-		case tcell.KeyUp:
-			X = (X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
-		case tcell.KeyDown:
-			X = (X + 1) % board.BOARD_SIZE
-		case tcell.KeyLeft:
-			Y = (Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
-		case tcell.KeyRight:
-			Y = (Y + 1) % board.BOARD_SIZE
-		case tcell.KeyEnter:
-			if isSelected {
-				game.MoveThePiece(fromX, fromY, X, Y, screen)
+			os.Exit(0) // Exit the program
+		}
 
-				isSelected = false
-
-			} else {
-				// Select the current piece (only if it belongs to the current player)
-				if game.ValidSelectCheck(X, Y) {
+		if game.CurrentPlayer == board.TRIANGLE {
+			switch ev.Key() {
+			case tcell.KeyUp:
+				X = (X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			case tcell.KeyDown:
+				X = (X + 1) % board.BOARD_SIZE
+			case tcell.KeyLeft:
+				Y = (Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			case tcell.KeyRight:
+				Y = (Y + 1) % board.BOARD_SIZE
+			case tcell.KeyEnter:
+				if isSelected {
+					// Move the piece
+					game.MoveThePiece(fromX, fromY, X, Y, screen)
+					isSelected = false
+				} else if game.ValidSelectCheck(X, Y) {
+					// Select the piece if it belongs to the current player
 					fromY, fromX = Y, X
 					isSelected = true
 				}
 			}
-
 		}
 	case *tcell.EventResize:
 		screen.Sync()
@@ -63,18 +63,25 @@ func main() {
 	}
 
 	board.CreateBoard()
+	board.RenderBoard(screen, X, Y, game.CurrentPlayer)
+
+	game.CurrentPlayer = board.CIRCLE
 
 	for {
-		board.RenderBoard(screen, X, Y, game.CurrentPlayer)
 
+		board.RenderBoard(screen, X, Y, game.CurrentPlayer)
 		playerInteraction(screen)
 
-		deathValues := game.DeathCheck()
-		if deathValues[0] != [2]int{-1, -1} {
-			board.RemovePiece(deathValues)
+		if game.CurrentPlayer == board.CIRCLE {
+			agent.AgentAction(screen, board.CIRCLE)
 		}
 
-		game.GameOverCheck(screen)
+		// if game.CurrentPlayer == board.TRIANGLE {
+		// 	agent.AgentAction(screen, board.TRIANGLE)
+		// }
 
+		game.DeathCheck()
+
+		game.GameOverCheck(screen)
 	}
 }
