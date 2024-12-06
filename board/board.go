@@ -96,9 +96,9 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 }
 
 // Move a piece based on cursor position and input
-func MovePiece(X, Y, targetX, targetY int, screen tcell.Screen) bool {
-	Board[targetX][targetY] = Board[X][Y]
-	Board[X][Y] = EMPTY
+func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
+	Board[X][Y] = Board[fromX][fromY]
+	Board[fromX][fromY] = EMPTY
 	return true
 }
 
@@ -111,5 +111,61 @@ func RemovePiece(deathValues [][2]int) {
 		}
 
 		Board[v[0]][v[1]] = EMPTY
+	}
+}
+
+func EndGameDisplay(info string, screen tcell.Screen) {
+	switch info {
+	case "Triangle":
+		info := "TRIANGLE WINS!, GAME OVER"
+		for i, r := range info {
+			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
+		}
+		screen.Show()
+
+		for {
+			ev := screen.PollEvent()
+			switch ev := ev.(type) {
+			case *tcell.EventKey:
+				switch ev.Key() {
+				case tcell.KeyEscape:
+					return // Exit on ESC
+				}
+			}
+		}
+	case "Circle":
+		info := "CIRCLE WINS!, GAME OVER"
+		for i, r := range info {
+			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
+		}
+		screen.Show()
+
+		for {
+			ev := screen.PollEvent()
+			switch ev := ev.(type) {
+			case *tcell.EventKey:
+				switch ev.Key() {
+				case tcell.KeyEscape:
+					return // Exit on ESC
+				}
+			}
+		}
+	case "Draw":
+		info := "It's a Draw!, GAME OVER"
+		for i, r := range info {
+			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
+		}
+		screen.Show()
+
+		for {
+			ev := screen.PollEvent()
+			switch ev := ev.(type) {
+			case *tcell.EventKey:
+				switch ev.Key() {
+				case tcell.KeyEscape:
+					return // Exit on ESC
+				}
+			}
+		}
 	}
 }

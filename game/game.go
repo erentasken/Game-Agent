@@ -13,6 +13,8 @@ var firstMove = true
 
 var turnCounter = 0 // its for per move for each player game logic.
 
+var CurrentPlayer = board.TRIANGLE
+
 func DeathCheck() [][2]int {
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
@@ -217,38 +219,27 @@ func DeathCheck() [][2]int {
 	return [][2]int{{-1, -1}}
 }
 
-func SwitchTurn(currentPlayer *board.Element) {
-	if board.CircleNum == 1 && *currentPlayer == board.CIRCLE {
-		*currentPlayer = board.TRIANGLE
-		turnCounter += 2
-		board.RoundCounter++
-		firstMove = true
-		return
+func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) {
+	if ValidMoveCheck(fromX, fromY, X, Y) && sequentialMoveCheck(X, Y, fromX, fromY) {
+		board.MovePiece(fromX, fromY, X, Y, screen)
+		switchTurnControl()
 	}
-
-	if board.TriangleNum == 1 && *currentPlayer == board.TRIANGLE {
-		*currentPlayer = board.CIRCLE
-		turnCounter += 2
-		board.RoundCounter++
-		firstMove = true
-		return
-	}
-
-	turnCounter++
-	board.RoundCounter++
-
-	if turnCounter%2 == 0 {
-		if *currentPlayer == board.TRIANGLE {
-			*currentPlayer = board.CIRCLE
-		} else {
-			*currentPlayer = board.TRIANGLE
-		}
-		firstMove = true
-	}
-
 }
 
-func SequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move already played piece
+func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid move
+	var targetDist = math.Abs(float64(X-fromX)) + math.Abs(float64(Y-fromY))
+
+	if Y < 0 || Y >= board.BOARD_SIZE || X < 0 || X >= board.BOARD_SIZE {
+		return false // Out of bounds
+	}
+
+	if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
+		return false // Invalid move
+	}
+	return true
+}
+
+func sequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move already played piece
 	if firstMove {
 		preMoveMemory[0] = X
 		preMoveMemory[1] = Y
@@ -263,75 +254,54 @@ func SequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move al
 	return true
 }
 
-func ValidMoveCheck(X, Y, targetX, targetY int) bool {
-	var targetDist = math.Abs(float64(X-targetX)) + math.Abs(float64(Y-targetY))
-
-	if targetY < 0 || targetY >= board.BOARD_SIZE || targetX < 0 || targetX >= board.BOARD_SIZE {
-		return false // Out of bounds
+func switchTurnControl() {
+	if board.CircleNum == 1 && CurrentPlayer == board.CIRCLE {
+		CurrentPlayer = board.TRIANGLE
+		turnCounter += 2
+		board.RoundCounter++
+		firstMove = true
+		return
 	}
 
-	if board.Board[targetX][targetY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
-		return false // Invalid move
+	if board.TriangleNum == 1 && CurrentPlayer == board.TRIANGLE {
+		CurrentPlayer = board.CIRCLE
+		turnCounter += 2
+		board.RoundCounter++
+		firstMove = true
+		return
 	}
-	return true
+
+	turnCounter++
+	board.RoundCounter++
+
+	if turnCounter%2 == 0 {
+		if CurrentPlayer == board.TRIANGLE {
+			CurrentPlayer = board.CIRCLE
+		} else {
+			CurrentPlayer = board.TRIANGLE
+		}
+		firstMove = true
+	}
+}
+
+func ValidSelectCheck(X, Y int) bool {
+	return board.Board[X][Y] != board.EMPTY && board.Board[X][Y] == CurrentPlayer
 }
 
 func GameOverCheck(screen tcell.Screen) bool {
 	if board.CircleNum == 0 {
-		info := "TRIANGLE WINS, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
-
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return true // Exit on ESC
-				}
-			}
-		}
+		board.EndGameDisplay("Triangle", screen)
+		return true
 	}
 
 	if board.TriangleNum == 0 {
-		info := "CIRCLE WINS, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, board.BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
-
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return true // Exit on ESC
-				}
-			}
-		}
+		board.EndGameDisplay("Circle", screen)
+		return true
 	}
 
 	if board.RoundCounter == 50 {
-		info := "DRAW, GAME OVER!"
-		for i, r := range info {
-			screen.SetContent(i, board.BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-
-		screen.Show()
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return true // Exit on ESC
-				}
-			}
-		}
+		board.EndGameDisplay("Draw", screen)
+		return true
 	}
 
 	return false
