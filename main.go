@@ -46,10 +46,10 @@ func main() {
 				Y = (Y + 1) % board.BOARD_SIZE
 			case tcell.KeyEnter:
 				if isSelected {
-					if game.SequentialMoveCheck(X, Y, selectedX, selectedY) {
-						if board.MovePiece(selectedX, selectedY, X, Y, screen) {
-							game.SwitchTurn(&currentPlayer)
-						}
+
+					if game.ValidMoveCheck(X, Y, selectedX, selectedY) && game.SequentialMoveCheck(X, Y, selectedX, selectedY) {
+						board.MovePiece(selectedX, selectedY, X, Y, screen)
+						game.SwitchTurn(&currentPlayer)
 					}
 
 					isSelected = false
@@ -68,7 +68,6 @@ func main() {
 		}
 
 		deathValues := game.DeathCheck()
-
 		if deathValues[0] != [2]int{-1, -1} {
 			board.RemovePiece(deathValues)
 		}

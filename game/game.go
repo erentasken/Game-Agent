@@ -1,8 +1,8 @@
 package game
 
 import (
-	"fmt"
 	"main/board"
+	"math"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -12,28 +12,78 @@ var preMoveMemory = []int{0, 0}
 var firstMove = true
 
 var turnCounter = 0  // its for per move for each player game logic.
-var roundCounter = 0 // its real move counter
+var RoundCounter = 0 // its real move counter
 
 func DeathCheck() [][2]int {
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
 
-			//between the different pieces
-
-			if j > 0 && j < board.BOARD_SIZE-1 {
-				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE ||
-					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE {
-					return [][2]int{{i, j}}
+			//a piece in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-2 {
+				if board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.TRIANGLE ||
+					board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.CIRCLE {
+					return [][2]int{{i, j + 1}}
 				}
 			}
 
-			if i > 0 && i < board.BOARD_SIZE-1 {
-				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE ||
-					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE {
-					return [][2]int{{i, j}}
+			//a piece in between the different pieces, vertical
+			if i < board.BOARD_SIZE-2 {
+				if board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.CIRCLE {
+					return [][2]int{{i + 1, j}}
 				}
 			}
+
+			//two pieces in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-3 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.TRIANGLE {
+					return [][2]int{{i, j + 1}, {i, j + 2}}
+				}
+			}
+
+			//two pieces in between the different pieces, vertical
+			if i < board.BOARD_SIZE-3 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.TRIANGLE {
+					return [][2]int{{i + 1, j}, {i + 2, j}}
+				}
+			}
+
+			//three pieces in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-4 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.TRIANGLE {
+					return [][2]int{{i, j + 1}, {i, j + 2}, {i, j + 3}}
+				}
+			}
+
+			//three pieces in between the different pieces, vertical
+			if i < board.BOARD_SIZE-4 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.TRIANGLE {
+					return [][2]int{{i + 1, j}, {i + 2, j}, {i + 3, j}}
+				}
+			}
+
+			//four pieces in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-5 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.TRIANGLE && board.Board[i][j+5] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.CIRCLE && board.Board[i][j+5] == board.TRIANGLE {
+					return [][2]int{{i, j + 1}, {i, j + 2}, {i, j + 3}, {i, j + 4}}
+				}
+			}
+
+			//four pieces in between the different pieces, vertical
+			if i < board.BOARD_SIZE-5 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.TRIANGLE && board.Board[i+5][j] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.CIRCLE && board.Board[i+5][j] == board.TRIANGLE {
+					return [][2]int{{i + 1, j}, {i + 2, j}, {i + 3, j}, {i + 4, j}}
+				}
+			}
+
+			//********************************************************************************************************************
 
 			//upper border four piece
 			if i == 0 {
@@ -172,7 +222,7 @@ func SwitchTurn(currentPlayer *board.Element) {
 	if board.CircleNum == 1 && *currentPlayer == board.CIRCLE {
 		*currentPlayer = board.TRIANGLE
 		turnCounter += 2
-		roundCounter++
+		RoundCounter++
 		firstMove = true
 		return
 	}
@@ -180,13 +230,13 @@ func SwitchTurn(currentPlayer *board.Element) {
 	if board.TriangleNum == 1 && *currentPlayer == board.TRIANGLE {
 		*currentPlayer = board.CIRCLE
 		turnCounter += 2
-		roundCounter++
+		RoundCounter++
 		firstMove = true
 		return
 	}
 
 	turnCounter++
-	roundCounter++
+	RoundCounter++
 
 	if turnCounter%2 == 0 {
 		if *currentPlayer == board.TRIANGLE {
@@ -211,6 +261,19 @@ func SequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move al
 		return false
 	}
 
+	return true
+}
+
+func ValidMoveCheck(X, Y, targetX, targetY int) bool {
+	var targetDist = math.Abs(float64(X-targetX)) + math.Abs(float64(Y-targetY))
+
+	if targetY < 0 || targetY >= board.BOARD_SIZE || targetX < 0 || targetX >= board.BOARD_SIZE {
+		return false // Out of bounds
+	}
+
+	if board.Board[targetX][targetY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
+		return false // Invalid move
+	}
 	return true
 }
 
@@ -253,9 +316,7 @@ func GameOverCheck(screen tcell.Screen) bool {
 		}
 	}
 
-	fmt.Print(roundCounter)
-
-	if roundCounter == 50 {
+	if RoundCounter == 50 {
 		info := "DRAW"
 		for i, r := range info {
 			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)

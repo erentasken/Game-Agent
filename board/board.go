@@ -1,8 +1,6 @@
 package board
 
 import (
-	"math"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -85,20 +83,26 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 		screen.SetContent(i, BOARD_SIZE+1, r, nil, tcell.StyleDefault)
 	}
 
+	// // Display the current player's turn
+	// info := "Move Counter: " + strconv.Itoa(board.Round)
+	// for i, r := range info {
+	// 	screen.SetContent(i, BOARD_SIZE+1, r, nil, tcell.StyleDefault)
+	// }
+
 	screen.Show()
 }
 
 // Move a piece based on cursor position and input
 func MovePiece(X, Y, targetX, targetY int, screen tcell.Screen) bool {
 
-	var targetDist = math.Abs(float64(X-targetX)) + math.Abs(float64(Y-targetY))
+	// var targetDist = math.Abs(float64(X-targetX)) + math.Abs(float64(Y-targetY))
 
-	if targetY < 0 || targetY >= BOARD_SIZE || targetX < 0 || targetX >= BOARD_SIZE {
-		return false // Out of bounds
-	}
-	if Board[X][Y] == EMPTY || Board[targetX][targetY] != EMPTY || targetDist >= 2 {
-		return false // Invalid move
-	}
+	// if targetY < 0 || targetY >= BOARD_SIZE || targetX < 0 || targetX >= BOARD_SIZE {
+	// 	return false // Out of bounds
+	// }
+	// if Board[X][Y] == EMPTY || Board[targetX][targetY] != EMPTY || targetDist >= 2 {
+	// 	return false // Invalid move
+	// }
 
 	Board[targetX][targetY] = Board[X][Y]
 	Board[X][Y] = EMPTY
