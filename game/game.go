@@ -11,8 +11,7 @@ var preMoveMemory = []int{0, 0}
 
 var firstMove = true
 
-var turnCounter = 0  // its for per move for each player game logic.
-var RoundCounter = 0 // its real move counter
+var turnCounter = 0 // its for per move for each player game logic.
 
 func DeathCheck() [][2]int {
 
@@ -222,7 +221,7 @@ func SwitchTurn(currentPlayer *board.Element) {
 	if board.CircleNum == 1 && *currentPlayer == board.CIRCLE {
 		*currentPlayer = board.TRIANGLE
 		turnCounter += 2
-		RoundCounter++
+		board.RoundCounter++
 		firstMove = true
 		return
 	}
@@ -230,13 +229,13 @@ func SwitchTurn(currentPlayer *board.Element) {
 	if board.TriangleNum == 1 && *currentPlayer == board.TRIANGLE {
 		*currentPlayer = board.CIRCLE
 		turnCounter += 2
-		RoundCounter++
+		board.RoundCounter++
 		firstMove = true
 		return
 	}
 
 	turnCounter++
-	RoundCounter++
+	board.RoundCounter++
 
 	if turnCounter%2 == 0 {
 		if *currentPlayer == board.TRIANGLE {
@@ -279,7 +278,7 @@ func ValidMoveCheck(X, Y, targetX, targetY int) bool {
 
 func GameOverCheck(screen tcell.Screen) bool {
 	if board.CircleNum == 0 {
-		info := "TRIANGLE WINS"
+		info := "TRIANGLE WINS, GAME OVER"
 		for i, r := range info {
 			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)
 		}
@@ -298,9 +297,9 @@ func GameOverCheck(screen tcell.Screen) bool {
 	}
 
 	if board.TriangleNum == 0 {
-		info := "CIRCLE WINS"
+		info := "CIRCLE WINS, GAME OVER"
 		for i, r := range info {
-			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)
+			screen.SetContent(i, board.BOARD_SIZE+3, r, nil, tcell.StyleDefault)
 		}
 		screen.Show()
 
@@ -316,11 +315,12 @@ func GameOverCheck(screen tcell.Screen) bool {
 		}
 	}
 
-	if RoundCounter == 50 {
-		info := "DRAW"
+	if board.RoundCounter == 50 {
+		info := "DRAW, GAME OVER!"
 		for i, r := range info {
-			screen.SetContent(i, board.BOARD_SIZE+2, r, nil, tcell.StyleDefault)
+			screen.SetContent(i, board.BOARD_SIZE+3, r, nil, tcell.StyleDefault)
 		}
+
 		screen.Show()
 		for {
 			ev := screen.PollEvent()
