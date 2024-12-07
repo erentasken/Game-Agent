@@ -71,7 +71,7 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 			// 	style = style.Foreground(tcell.ColorYellow)
 			// }
 
-			if Board[i][j] == CIRCLE && Board[i][j] == TRIANGLE {
+			if Board[i][j] == CIRCLE || Board[i][j] == TRIANGLE {
 				style = style.Foreground(tcell.ColorYellow)
 			}
 
@@ -103,6 +103,7 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 	Board[X][Y] = Board[fromX][fromY]
 	Board[fromX][fromY] = EMPTY
+
 	return true
 }
 

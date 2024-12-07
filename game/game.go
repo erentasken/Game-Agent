@@ -9,9 +9,9 @@ import (
 
 var preMoveMemory = []int{0, 0}
 
-var firstMove = true
+var FirstMove = true
 
-var turnCounter = 0 // its for per move for each player game logic.
+var TurnCounter = 0 // its for per move for each player game logic.
 
 var CurrentPlayer = board.EMPTY
 
@@ -263,19 +263,9 @@ func deathCoordinates() [][2]int {
 }
 
 func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
-	if CurrentPlayer == board.EMPTY {
-		switch board.Board[fromX][fromY] {
-		case board.CIRCLE:
-			CurrentPlayer = board.CIRCLE
-		case board.TRIANGLE:
-			CurrentPlayer = board.TRIANGLE
-		}
-	}
-
 	if ValidMoveCheck(fromX, fromY, X, Y) && sequentialMoveCheck(X, Y, fromX, fromY) {
 		board.MovePiece(fromX, fromY, X, Y, screen)
 		board.RenderBoard(screen, X, Y, CurrentPlayer)
-
 		switchTurnControl()
 		return true
 	} else {
@@ -292,20 +282,23 @@ func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid
 	}
 
 	if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
+
 		return false // Invalid move
 	}
 	return true
 }
 
 func sequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move already played piece
-	if firstMove {
+	if FirstMove {
 		preMoveMemory[0] = X
 		preMoveMemory[1] = Y
-		firstMove = false
+		FirstMove = false
 		return true
 	}
 
 	if preMoveMemory[0] == selectedX && preMoveMemory[1] == selectedY {
+
+		// fmt.Print(" new move", preMoveMemory)
 		return false
 	}
 
@@ -315,32 +308,32 @@ func sequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move al
 func switchTurnControl() {
 	if board.CircleNum == 1 && CurrentPlayer == board.CIRCLE {
 		CurrentPlayer = board.TRIANGLE
-		turnCounter += 2
+		TurnCounter += 2
 		board.RoundCounter++
-		firstMove = true
-
+		FirstMove = true
 		return
 	}
 
 	if board.TriangleNum == 1 && CurrentPlayer == board.TRIANGLE {
 		CurrentPlayer = board.CIRCLE
-		turnCounter += 2
+		TurnCounter += 2
 		board.RoundCounter++
-		firstMove = true
+		FirstMove = true
 		return
 	}
 
-	turnCounter++
 	board.RoundCounter++
+	TurnCounter++
 
-	if turnCounter%2 == 0 {
+	if TurnCounter%2 == 0 {
 		if CurrentPlayer == board.TRIANGLE {
 			CurrentPlayer = board.CIRCLE
 		} else {
 			CurrentPlayer = board.TRIANGLE
 		}
-		firstMove = true
+		FirstMove = true
 	}
+
 }
 
 func ValidSelectCheck(X, Y int) bool {

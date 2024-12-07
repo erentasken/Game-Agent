@@ -3,66 +3,83 @@ package agent
 import (
 	"main/board"
 	"main/game"
-	"time"
-
-	"math/rand"
+	"main/minimax"
+	"math"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-var Sync = 0
+var status bool
 
 func AgentAction(screen tcell.Screen, element board.Element) {
-	time.Sleep(1000 * time.Millisecond)
+	var preAction minimax.Action
 
-	style := tcell.StyleDefault
-	style = style.Background(tcell.ColorDarkGoldenrod)
-	actions := game.GetPossibleActions(element)
-	for _, a := range actions {
-		// fmt.Print(a, " ")
-		for k := 0; k < 2; k++ {
-			screen.SetContent(a.ToY*2+k, a.ToX, ' ', nil, style)
+	for i := 0; i < 2; i++ {
+		// If Circle is the current player and there's only 1 circle, skip this iteration
+		if game.CurrentPlayer == board.CIRCLE && board.CircleNum == 1 {
+			i = 1
+		}
+
+		// Set the depth of the minimax search (increase for harder AI)
+		const depth = 3
+
+		// Set mock data for Minimax evaluation
+		minimax.MockTurnCounter = game.TurnCounter
+		minimax.MockRoundCounter = board.RoundCounter
+		minimax.MockCurrentPlayer = game.CurrentPlayer
+		minimax.MockCircleNum = board.CircleNum
+		minimax.MockTriangleNum = board.TriangleNum
+		minimax.MockFirstMove = game.FirstMove
+
+		// Deep copy the board state to simulate moves
+		deepCopyBoard(board.Board)
+
+		// Get all possible actions for the agent
+		actions := minimax.GetPossibleActions(element)
+		if len(actions) == 0 {
+			return
+		}
+
+		var bestAction minimax.Action
+		bestEval := math.MinInt32
+
+		// Loop through all actions and find the best one using Minimax
+		for _, action := range actions {
+			// Skip if the current action is moving the same piece as the last move
+			if action.FromX == preAction.FromX && action.FromY == preAction.FromY {
+				continue
+			}
+
+			// Simulate the move
+			minimax.MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY)
+
+			// Evaluate this move using Minimax
+			eval := minimax.Minimax(depth-1, false, element, &minimax.MockBoard)
+
+			// If this move is better than the previous best, store it
+			if eval > bestEval {
+				bestEval = eval
+				bestAction = action
+			}
+		}
+
+		// Perform the best action
+		status := game.MoveThePiece(bestAction.FromX, bestAction.FromY, bestAction.ToX, bestAction.ToY, screen)
+
+		// Update the last action with the current one
+		preAction = bestAction
+
+		if i == 1 && status == false {
+			i = 0
 		}
 	}
-	screen.Show()
+}
 
-	// ev := screen.PollEvent()
-	// switch ev := ev.(type) {
-	// case *tcell.EventKey:
-	// 	if ev.Key() == tcell.KeyEscape {
-	// 		screen.Fini()
-	// 		os.Exit(0) // Exit the program
-	// 	}
-	// }
-
-	// Shuffle the actions to add randomness
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(actions), func(i, j int) {
-		actions[i], actions[j] = actions[j], actions[i]
-	})
-
-	// Attempt to perform two valid moves
-	movesPerformed := 0
-	for _, action := range actions {
-		time.Sleep(1000 * time.Millisecond)
-
-		if game.MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY, screen) {
-			movesPerformed++
-			if movesPerformed == 2 {
-				break // Stop after two successful moves
-			}
-
-			if element == board.TRIANGLE {
-				if board.TriangleNum == 1 {
-					break
-				}
-			}
-
-			if element == board.CIRCLE {
-				if board.CircleNum == 1 {
-					break
-				}
-			}
+// deepCopyBoard creates a new deep copy of the board to simulate moves
+func deepCopyBoard(originalBoard [board.BOARD_SIZE][board.BOARD_SIZE]board.Element) {
+	for i := 0; i < board.BOARD_SIZE; i++ {
+		for j := 0; j < board.BOARD_SIZE; j++ {
+			minimax.MockBoard[i][j] = originalBoard[i][j]
 		}
 	}
 }
