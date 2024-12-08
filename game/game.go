@@ -285,6 +285,11 @@ func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid
 
 		return false // Invalid move
 	}
+
+	if board.Board[fromX][fromY] == board.CIRCLE && CurrentPlayer == board.TRIANGLE ||
+		board.Board[fromX][fromY] == board.TRIANGLE && CurrentPlayer == board.CIRCLE {
+		return false
+	}
 	return true
 }
 

@@ -6,6 +6,7 @@ import (
 	"main/board"
 	"main/game"
 	"os"
+	"sync"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -68,20 +69,53 @@ func main() {
 	game.CurrentPlayer = board.CIRCLE
 
 	for {
+		var wg sync.WaitGroup
 
-		board.RenderBoard(screen, X, Y, game.CurrentPlayer)
-		playerInteraction(screen)
+		// Add the number of Goroutines to wait for
+		wg.Add(4)
 
-		if game.CurrentPlayer == board.CIRCLE {
-			agent.AgentAction(screen, board.CIRCLE)
-		}
+		go func() {
+			defer wg.Done() // Mark this Goroutine as done when it finishes
+			for {
+				board.RenderBoard(screen, X, Y, game.CurrentPlayer)
+			}
+		}()
 
-		// if game.CurrentPlayer == board.TRIANGLE {
-		// 	agent.AgentAction(screen, board.TRIANGLE)
-		// }
+		go func() {
+			defer wg.Done()
+			for {
+				playerInteraction(screen)
+			}
+		}()
 
-		game.DeathCheck()
+		go func() {
+			defer wg.Done()
+			for {
+				game.DeathCheck()
+			}
+		}()
 
-		game.GameOverCheck(screen)
+		go func() {
+			defer wg.Done()
+			for {
+				game.GameOverCheck(screen)
+			}
+		}()
+
+		// Optionally run agent logic in a separate Goroutine
+		go func() {
+			for {
+				if game.CurrentPlayer == board.CIRCLE {
+					agent.AgentAction(screen, board.CIRCLE)
+				}
+				// Uncomment if you want to handle TRIANGLE logic
+				// if game.CurrentPlayer == board.TRIANGLE {
+				// 	agent.AgentAction(screen, board.TRIANGLE)
+				// }
+			}
+		}()
+
+		// Wait for all Goroutines to finish (infinite loops won't terminate normally)
+		wg.Wait()
 	}
 }
