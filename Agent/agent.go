@@ -15,7 +15,7 @@ var status bool
 
 func AgentAction(screen tcell.Screen, element board.Element) {
 	// Set the depth of the minimax search (increase for harder AI)
-	const depth = 7
+	const depth = 3
 
 	// Set mock data for Minimax evaluation
 	minimax.MockTurnCounter = game.TurnCounter

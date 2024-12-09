@@ -1,7 +1,6 @@
 package board
 
 import (
-	"os"
 	"strconv"
 
 	"github.com/gdamore/tcell/v2"
@@ -119,60 +118,43 @@ func RemovePiece(deathValues [][2]int) {
 	}
 }
 
-func EndGameDisplay(info string, screen tcell.Screen) {
-	switch info {
-	case "Triangle":
-		info := "TRIANGLE WINS!, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
+func GameOverMessage(screen tcell.Screen, gameStatus int) {
+	screen.Clear()
+	// Display the game over message
+	gameOverMsg := "Game Over"
+	for i, ch := range gameOverMsg {
+		screen.SetContent(i, 0, ch, nil, tcell.StyleDefault)
+	}
 
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return // Exit on ESC
-				}
-			}
-		}
-	case "Circle":
-		info := "CIRCLE WINS!, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
+	if gameStatus == -1 {
+		gameOverMsg = "It's a Draw"
+	} else if gameStatus == 0 {
+		gameOverMsg = "Triangle Wins"
+	} else if gameStatus == 1 {
+		gameOverMsg = "Circle Wins"
+	}
 
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return // Exit on ESC
-				}
-			}
-		}
-	case "Draw":
-		info := "It's a Draw!, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
+	for i, ch := range gameOverMsg {
+		screen.SetContent(i, 1, ch, nil, tcell.StyleDefault)
+	}
 
-		os.Exit(0)
+	gameOverMsg = "Press ESC to exit"
 
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return // Exit on ESC
-				}
+	for i, ch := range gameOverMsg {
+		screen.SetContent(i, 2, ch, nil, tcell.StyleDefault)
+	}
+
+	screen.Show()
+
+	for {
+		ev := screen.PollEvent()
+		switch ev := ev.(type) {
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyEscape:
+				return // Exit on ESC
 			}
 		}
 	}
+
 }

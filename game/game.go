@@ -3,17 +3,21 @@ package game
 import (
 	"main/board"
 	"math"
+	"sync"
+	"sync/atomic"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-var preMoveMemory = []int{0, 0}
+var preMoveMemory = []int{-1, -1}
 
 var FirstMove = true
 
-var TurnCounter = 0 // its for per move for each player game logic.
+var TurnCounter int32 // its for per move for each player game logic.
 
 var CurrentPlayer = board.EMPTY
+
+var mu sync.Mutex
 
 type Action struct {
 	FromX, FromY, ToX, ToY int
@@ -263,15 +267,49 @@ func deathCoordinates() [][2]int {
 }
 
 func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
-	if ValidMoveCheck(fromX, fromY, X, Y) && sequentialMoveCheck(X, Y, fromX, fromY) {
-		board.MovePiece(fromX, fromY, X, Y, screen)
-		board.RenderBoard(screen, X, Y, CurrentPlayer)
-		switchTurnControl()
-		return true
-	} else {
+	if !ValidMoveCheck(fromX, fromY, X, Y) {
 		return false
 	}
 
+	if atomic.LoadInt32(&TurnCounter) == 1 {
+		if preMoveMemory[0] == fromX && preMoveMemory[1] == fromY {
+			return false
+		}
+	}
+
+	mu.Lock()
+
+	board.MovePiece(fromX, fromY, X, Y, screen)
+	board.RenderBoard(screen, X, Y, CurrentPlayer)
+
+	if atomic.LoadInt32(&TurnCounter) == 0 {
+		preMoveMemory = []int{X, Y}
+	}
+
+	if CurrentPlayer == board.CIRCLE && board.CircleNum == 1 ||
+		CurrentPlayer == board.TRIANGLE && board.TriangleNum == 1 {
+		atomic.AddInt32(&TurnCounter, 1)
+	}
+
+	atomic.AddInt32(&TurnCounter, 1)
+
+	mu.Unlock()
+
+	if atomic.LoadInt32(&TurnCounter) == 2 {
+		atomic.StoreInt32(&TurnCounter, 0)
+		mu.Lock()
+		preMoveMemory = []int{-1, -1}
+
+		if CurrentPlayer == board.CIRCLE {
+			CurrentPlayer = board.TRIANGLE
+		} else {
+			CurrentPlayer = board.CIRCLE
+
+		}
+		mu.Unlock()
+	}
+
+	return true
 }
 
 func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid move
@@ -282,84 +320,39 @@ func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid
 	}
 
 	if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
-
 		return false // Invalid move
 	}
 
+	mu.Lock()
 	if board.Board[fromX][fromY] == board.CIRCLE && CurrentPlayer == board.TRIANGLE ||
 		board.Board[fromX][fromY] == board.TRIANGLE && CurrentPlayer == board.CIRCLE {
+		mu.Unlock()
 		return false
 	}
-	return true
-}
-
-func sequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move already played piece
-	if FirstMove {
-		preMoveMemory[0] = X
-		preMoveMemory[1] = Y
-		FirstMove = false
-		return true
-	}
-
-	if preMoveMemory[0] == selectedX && preMoveMemory[1] == selectedY {
-
-		// fmt.Print(" new move", preMoveMemory)
-		return false
-	}
+	mu.Unlock()
 
 	return true
-}
-
-func switchTurnControl() {
-	if board.CircleNum == 1 && CurrentPlayer == board.CIRCLE {
-		CurrentPlayer = board.TRIANGLE
-		TurnCounter += 2
-		board.RoundCounter++
-		FirstMove = true
-		return
-	}
-
-	if board.TriangleNum == 1 && CurrentPlayer == board.TRIANGLE {
-		CurrentPlayer = board.CIRCLE
-		TurnCounter += 2
-		board.RoundCounter++
-		FirstMove = true
-		return
-	}
-
-	board.RoundCounter++
-	TurnCounter++
-
-	if TurnCounter%2 == 0 {
-		if CurrentPlayer == board.TRIANGLE {
-			CurrentPlayer = board.CIRCLE
-		} else {
-			CurrentPlayer = board.TRIANGLE
-		}
-		FirstMove = true
-	}
-
 }
 
 func ValidSelectCheck(X, Y int) bool {
 	return board.Board[X][Y] != board.EMPTY && board.Board[X][Y] == CurrentPlayer
 }
 
-func GameOverCheck(screen tcell.Screen) bool {
+func GameOverCheck(screen tcell.Screen) int {
 	if board.CircleNum == 0 {
-		board.EndGameDisplay("Triangle", screen)
-		return true
+		// board.EndGameDisplay("Triangle", screen)
+		return 0
 	}
 
 	if board.TriangleNum == 0 {
-		board.EndGameDisplay("Circle", screen)
-		return true
+		// board.EndGameDisplay("Circle", screen)
+		return 1
 	}
 
 	if board.RoundCounter == 50 {
-		board.EndGameDisplay("Draw", screen)
-		return true
+		// board.EndGameDisplay("Draw", screen)
+		return -1
 	}
 
-	return false
+	return 2
 }

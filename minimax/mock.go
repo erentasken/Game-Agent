@@ -7,7 +7,7 @@ import (
 
 var MockBoard [7][7]board.Element
 
-var MockTurnCounter = 0
+var MockTurnCounter int32
 var MockRoundCounter = 0
 var MockCurrentPlayer = board.EMPTY
 var MockCircleNum = 0

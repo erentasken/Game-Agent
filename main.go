@@ -24,26 +24,29 @@ func playerInteraction(screen tcell.Screen) {
 			os.Exit(0) // Exit the program
 		}
 
-		if game.CurrentPlayer == board.TRIANGLE {
-			switch ev.Key() {
-			case tcell.KeyUp:
-				X = (X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
-			case tcell.KeyDown:
-				X = (X + 1) % board.BOARD_SIZE
-			case tcell.KeyLeft:
-				Y = (Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
-			case tcell.KeyRight:
-				Y = (Y + 1) % board.BOARD_SIZE
-			case tcell.KeyEnter:
-				if isSelected {
-					// Move the piece
-					game.MoveThePiece(fromX, fromY, X, Y, screen)
-					isSelected = false
-				} else if game.ValidSelectCheck(X, Y) {
-					// Select the piece if it belongs to the current player
-					fromY, fromX = Y, X
-					isSelected = true
-				}
+		// if game.CurrentPlayer == board.CIRCLE {
+		// 	return
+		// }
+
+		switch ev.Key() {
+		case tcell.KeyUp:
+			X = (X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+		case tcell.KeyDown:
+			X = (X + 1) % board.BOARD_SIZE
+		case tcell.KeyLeft:
+			Y = (Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+		case tcell.KeyRight:
+			Y = (Y + 1) % board.BOARD_SIZE
+		case tcell.KeyEnter:
+			if isSelected {
+				// Move the piece
+				game.MoveThePiece(fromX, fromY, X, Y, screen)
+
+				isSelected = false
+			} else if game.ValidSelectCheck(X, Y) {
+				// Select the piece if it belongs to the current player
+				fromY, fromX = Y, X
+				isSelected = true
 			}
 		}
 	case *tcell.EventResize:
@@ -68,54 +71,68 @@ func main() {
 
 	game.CurrentPlayer = board.CIRCLE
 
-	for {
-		var wg sync.WaitGroup
+	var gameOver = false
 
-		// Add the number of Goroutines to wait for
-		wg.Add(4)
+	var wg sync.WaitGroup
 
-		go func() {
-			defer wg.Done() // Mark this Goroutine as done when it finishes
-			for {
-				board.RenderBoard(screen, X, Y, game.CurrentPlayer)
+	var gameStatus int
+
+	wg.Add(4)
+
+	go func() {
+		defer wg.Done() // Mark this Goroutine as done when it finishes
+		for {
+			if gameOver {
+				return
 			}
-		}()
+			board.RenderBoard(screen, X, Y, game.CurrentPlayer)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			for {
-				playerInteraction(screen)
+	go func() {
+		defer wg.Done()
+		for {
+			playerInteraction(screen)
+			if gameOver {
+				return
 			}
-		}()
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			for {
-				game.DeathCheck()
+	go func() {
+		defer wg.Done()
+		for {
+			if gameOver {
+				return
 			}
-		}()
+			game.DeathCheck()
+		}
 
-		go func() {
-			defer wg.Done()
-			for {
-				game.GameOverCheck(screen)
+	}()
+
+	go func() {
+		defer wg.Done()
+		for {
+			gameStatus = game.GameOverCheck(screen)
+			if gameStatus != 2 {
+				gameOver = true
+				return
 			}
-		}()
+		}
+	}()
 
-		// Optionally run agent logic in a separate Goroutine
-		go func() {
-			for {
-				if game.CurrentPlayer == board.CIRCLE {
-					agent.AgentAction(screen, board.CIRCLE)
-				}
-				// Uncomment if you want to handle TRIANGLE logic
-				// if game.CurrentPlayer == board.TRIANGLE {
-				// 	agent.AgentAction(screen, board.TRIANGLE)
-				// }
+	go func() {
+		for {
+			if game.CurrentPlayer == board.CIRCLE {
+				agent.AgentAction(screen, board.CIRCLE)
 			}
-		}()
+			// if game.CurrentPlayer == board.TRIANGLE {
+			// 	agent.AgentAction(screen, board.TRIANGLE)
+			// }
+		}
+	}()
 
-		// Wait for all Goroutines to finish (infinite loops won't terminate normally)
-		wg.Wait()
-	}
+	wg.Wait()
+
+	board.GameOverMessage(screen, gameStatus)
 }
