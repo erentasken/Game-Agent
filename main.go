@@ -7,11 +7,11 @@ import (
 	"main/game"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-var Y, X = 0, 0
 var fromY, fromX int
 var isSelected = false
 
@@ -24,28 +24,31 @@ func playerInteraction(screen tcell.Screen) {
 			os.Exit(0) // Exit the program
 		}
 
-		// if game.CurrentPlayer == board.CIRCLE {
-		// 	return
-		// }
-
 		switch ev.Key() {
 		case tcell.KeyUp:
-			X = (X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			board.X = (board.X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
 		case tcell.KeyDown:
-			X = (X + 1) % board.BOARD_SIZE
+			board.X = (board.X + 1) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
 		case tcell.KeyLeft:
-			Y = (Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			board.Y = (board.Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
 		case tcell.KeyRight:
-			Y = (Y + 1) % board.BOARD_SIZE
+			board.Y = (board.Y + 1) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
 		case tcell.KeyEnter:
 			if isSelected {
 				// Move the piece
-				game.MoveThePiece(fromX, fromY, X, Y, screen)
+				game.MoveThePiece(fromX, fromY, board.X, board.Y, screen)
 
 				isSelected = false
-			} else if game.ValidSelectCheck(X, Y) {
+			} else if game.ValidSelectCheck(board.X, board.Y) {
+				// if game.CurrentPlayer == board.CIRCLE {
+				// 	return
+				// }
 				// Select the piece if it belongs to the current player
-				fromY, fromX = Y, X
+				fromY, fromX = board.Y, board.X
 				isSelected = true
 			}
 		}
@@ -67,9 +70,10 @@ func main() {
 	}
 
 	board.CreateBoard()
-	board.RenderBoard(screen, X, Y, game.CurrentPlayer)
 
 	game.CurrentPlayer = board.CIRCLE
+
+	board.RenderBoard(screen, game.CurrentPlayer)
 
 	var gameOver = false
 
@@ -77,25 +81,18 @@ func main() {
 
 	var gameStatus int
 
-	wg.Add(4)
-
-	go func() {
-		defer wg.Done() // Mark this Goroutine as done when it finishes
-		for {
-			if gameOver {
-				return
-			}
-			board.RenderBoard(screen, X, Y, game.CurrentPlayer)
-		}
-	}()
+	wg.Add(3)
 
 	go func() {
 		defer wg.Done()
 		for {
+			if gameOver {
+				return
+			}
+
 			playerInteraction(screen)
-			if gameOver {
-				return
-			}
+
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
@@ -105,7 +102,8 @@ func main() {
 			if gameOver {
 				return
 			}
-			game.DeathCheck()
+			game.DeathCheck(screen)
+			time.Sleep(100 * time.Millisecond)
 		}
 
 	}()
@@ -118,18 +116,25 @@ func main() {
 				gameOver = true
 				return
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
 	go func() {
 		for {
+			if gameOver {
+				return
+			}
 			if game.CurrentPlayer == board.CIRCLE {
 				agent.AgentAction(screen, board.CIRCLE)
 			}
-			// if game.CurrentPlayer == board.TRIANGLE {
-			// 	agent.AgentAction(screen, board.TRIANGLE)
-			// }
+
+			if game.CurrentPlayer == board.TRIANGLE {
+				agent.AgentAction(screen, board.TRIANGLE)
+			}
+			// time.Sleep(100 * time.Millisecond)
 		}
+
 	}()
 
 	wg.Wait()

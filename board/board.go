@@ -12,7 +12,9 @@ const (
 
 var CircleNum = 4
 var TriangleNum = 4
-var RoundCounter = 0
+var MoveCounter = 0
+
+var X, Y = 0, 0
 
 type Element int
 
@@ -45,7 +47,7 @@ func CreateBoard() {
 	}
 }
 
-func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
+func RenderBoard(screen tcell.Screen, currentPlayer Element) {
 	screen.Clear()
 	cellWidth := 2 // Fixed width for each cell to maintain alignment
 
@@ -66,9 +68,9 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 				style = style.Background(tcell.ColorGray)
 			}
 
-			// if Board[i][j] == currentPlayer {
-			// 	style = style.Foreground(tcell.ColorYellow)
-			// }
+			if Board[i][j] == currentPlayer {
+				style = style.Foreground(tcell.ColorYellow)
+			}
 
 			if Board[i][j] == CIRCLE || Board[i][j] == TRIANGLE {
 				style = style.Foreground(tcell.ColorYellow)
@@ -90,7 +92,7 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 	}
 
 	// Display the move counter
-	info = "Move Counter: " + strconv.Itoa(RoundCounter)
+	info = "Move Counter: " + strconv.Itoa(MoveCounter)
 	for i, r := range info {
 		screen.SetContent(i, BOARD_SIZE+2, r, nil, tcell.StyleDefault)
 	}
@@ -102,7 +104,6 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 	Board[X][Y] = Board[fromX][fromY]
 	Board[fromX][fromY] = EMPTY
-
 	return true
 }
 

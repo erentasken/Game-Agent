@@ -3,6 +3,7 @@ package minimax
 import (
 	"main/board"
 	"math"
+	"sync/atomic"
 )
 
 var MockBoard [7][7]board.Element
@@ -14,24 +15,46 @@ var MockCircleNum = 0
 var MockTriangleNum = 0
 var MockFirstMove = true
 
+var preMoveMemory = []int{-1, -1}
+
 func MoveThePiece(fromX, fromY, X, Y int) bool {
-	if MockCurrentPlayer == board.EMPTY {
-		switch MockBoard[fromX][fromY] {
-		case board.CIRCLE:
-			MockCurrentPlayer = board.CIRCLE
-		case board.TRIANGLE:
-			MockCurrentPlayer = board.TRIANGLE
+	if !ValidMoveCheck(fromX, fromY, X, Y) {
+		return false
+	}
+
+	if MockTurnCounter == 1 {
+		if preMoveMemory[0] == fromX && preMoveMemory[1] == fromY {
+			return false
 		}
 	}
 
-	if ValidMoveCheck(fromX, fromY, X, Y) && SequentialMoveCheck(X, Y, fromX, fromY) {
-		MockBoard[X][Y] = MockBoard[fromX][fromY]
-		MockBoard[fromX][fromY] = board.EMPTY
-		SwitchTurnControl()
-		return true
-	} else {
-		return false
+	MockBoard[X][Y] = MockBoard[fromX][fromY]
+	MockBoard[fromX][fromY] = board.EMPTY
+
+	if atomic.LoadInt32(&MockTurnCounter) == 0 {
+		preMoveMemory = []int{X, Y}
 	}
+
+	if MockCurrentPlayer == board.CIRCLE && MockCircleNum == 1 ||
+		MockCurrentPlayer == board.TRIANGLE && MockTriangleNum == 1 {
+		MockTurnCounter++
+	}
+
+	MockTurnCounter++
+
+	if MockTurnCounter == 2 {
+		MockTurnCounter = 0
+
+		preMoveMemory = []int{-1, -1}
+
+		if MockCurrentPlayer == board.CIRCLE {
+			MockCurrentPlayer = board.TRIANGLE
+		} else {
+			MockCurrentPlayer = board.CIRCLE
+		}
+	}
+
+	return true
 }
 
 type Action struct {
@@ -80,52 +103,10 @@ func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid
 		return false // Invalid move
 	}
 
-	return true
-}
-
-var preMoveMemory = [2]int{0, 0}
-
-func SequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move already played piece
-	if MockFirstMove {
-		preMoveMemory[0] = X
-		preMoveMemory[1] = Y
-		MockFirstMove = false
-		return true
-	}
-
-	if preMoveMemory[0] == selectedX && preMoveMemory[1] == selectedY {
+	if MockBoard[fromX][fromY] == board.CIRCLE && MockCurrentPlayer == board.TRIANGLE ||
+		MockBoard[fromX][fromY] == board.TRIANGLE && MockCurrentPlayer == board.CIRCLE {
 		return false
 	}
 
 	return true
-}
-
-func SwitchTurnControl() {
-	if MockCircleNum == 1 && MockCurrentPlayer == board.CIRCLE {
-		MockCurrentPlayer = board.TRIANGLE
-		MockTurnCounter += 2
-		MockRoundCounter++
-		MockFirstMove = true
-		return
-	}
-
-	if MockTriangleNum == 1 && MockCurrentPlayer == board.TRIANGLE {
-		MockCurrentPlayer = board.CIRCLE
-		MockTurnCounter += 2
-		MockRoundCounter++
-		MockFirstMove = true
-		return
-	}
-
-	MockTurnCounter++
-	MockRoundCounter++
-
-	if MockTurnCounter%2 == 0 {
-		if MockCurrentPlayer == board.TRIANGLE {
-			MockCurrentPlayer = board.CIRCLE
-		} else {
-			MockCurrentPlayer = board.TRIANGLE
-		}
-		MockFirstMove = true
-	}
 }

@@ -10,6 +10,7 @@ const (
 	nearBorderMultiplier    = 2
 	centerControlMultiplier = 3
 	pieceCountMultiplier    = 5
+	killBonus               = 5
 )
 
 func EvaluateBoard(player board.Element) int {
@@ -73,6 +74,21 @@ func EvaluateBoard(player board.Element) int {
 		score += MockCircleNum * pieceCountMultiplier
 	}
 
+	deathValues := deathCoordinates()
+	if deathValues[0][0] != -1 {
+		for _, v := range deathValues {
+			if MockBoard[v[0]][v[1]] == board.TRIANGLE {
+				if player == board.CIRCLE {
+					score += killBonus
+				}
+			} else {
+				if player == board.TRIANGLE {
+					score += killBonus
+				}
+			}
+		}
+	}
+
 	return score
 }
 
@@ -105,6 +121,12 @@ func evaluateAdjacency(score *int, player board.Element, circlePos, trianglePos 
 		} else {
 			*score -= adjacentPairBonus // Disfavor triangles
 		}
+	} else {
+		if player == board.TRIANGLE {
+			*score += adjacentPairBonus // Favor triangles
+		} else {
+			*score -= adjacentPairBonus // Disfavor circles
+		}
 	}
 }
 
@@ -130,112 +152,206 @@ func abs(x int) int {
 	return x
 }
 
-// func EvaluateBoard(player board.Element) int {
-// 	// Variables to store the evaluation score
-// 	var score int
+func deathCoordinates() [][2]int {
 
-// 	// Count pieces near the borders (edges of the board)
-// 	var nearBorderCount int
-// 	var centerControlCount int
+	for i := 0; i < board.BOARD_SIZE; i++ {
+		for j := 0; j < board.BOARD_SIZE; j++ {
 
-// 	for i := 0; i < board.BOARD_SIZE; i++ {
-// 		for j := 0; j < board.BOARD_SIZE; j++ {
-// 			if MockBoard[i][j] == player {
-// 				// Check if the piece is on the border
-// 				if i == 0 || i == board.BOARD_SIZE-1 || j == 0 || j == board.BOARD_SIZE-1 {
-// 					nearBorderCount++
-// 					if (i == 0 && j == 0) || (i == 0 && j == board.BOARD_SIZE-1) || (i == board.BOARD_SIZE-1 && j == 0) || (i == board.BOARD_SIZE-1 && j == board.BOARD_SIZE-1) {
-// 						// Corners give extra points
-// 						score -= 2
-// 					} else {
-// 						// Edges give normal points
-// 						score -= 1
-// 					}
-// 				}
+			//a piece in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-2 {
+				if board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.TRIANGLE ||
+					board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.CIRCLE {
+					return [][2]int{{i, j + 1}}
+				}
+			}
 
-// 				// Check if the piece is near the center (center control)
-// 				if (i >= board.BOARD_SIZE/2-1 && i <= board.BOARD_SIZE/2+1) && (j >= board.BOARD_SIZE/2-1 && j <= board.BOARD_SIZE/2+1) {
-// 					centerControlCount++
-// 					score += 3 // Center pieces give more weight
-// 				}
-// 			}
-// 		}
-// 	}
+			//a piece in between the different pieces, vertical
+			if i < board.BOARD_SIZE-2 {
+				if board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.CIRCLE {
+					return [][2]int{{i + 1, j}}
+				}
+			}
 
-// 	// Reward more for having more pieces near the border (but don't give too much weight)
-// 	score += nearBorderCount * 2
+			//two pieces in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-3 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.TRIANGLE {
+					return [][2]int{{i, j + 1}, {i, j + 2}}
+				}
+			}
 
-// 	// Reward more for having more pieces in the center
-// 	score += centerControlCount * 3
+			//two pieces in between the different pieces, vertical
+			if i < board.BOARD_SIZE-3 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.TRIANGLE {
+					return [][2]int{{i + 1, j}, {i + 2, j}}
+				}
+			}
 
-// 	// Finally, return the score based on the number of pieces the player has
-// 	if player == board.TRIANGLE {
-// 		return score + MockTriangleNum*5
-// 	}
-// 	return score + MockCircleNum*5
-// }
+			//three pieces in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-4 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.TRIANGLE {
+					return [][2]int{{i, j + 1}, {i, j + 2}, {i, j + 3}}
+				}
+			}
 
-// func evaluateBoard(player board.Element) int {
-// 	// Variables to store the evaluation score
-// 	var score int
-// 	var nearBorderCount, centerControlCount int
+			//three pieces in between the different pieces, vertical
+			if i < board.BOARD_SIZE-4 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.TRIANGLE {
+					return [][2]int{{i + 1, j}, {i + 2, j}, {i + 3, j}}
+				}
+			}
 
-// 	// Store positions of all circles and triangles
-// 	var circlePositions, trianglePositions [][2]int
+			//four pieces in between the different pieces, horizontal
+			if j < board.BOARD_SIZE-5 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.TRIANGLE && board.Board[i][j+5] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.CIRCLE && board.Board[i][j+5] == board.TRIANGLE {
+					return [][2]int{{i, j + 1}, {i, j + 2}, {i, j + 3}, {i, j + 4}}
+				}
+			}
 
-// 	for i := 0; i < board.BOARD_SIZE; i++ {
-// 		for j := 0; j < board.BOARD_SIZE; j++ {
-// 			if MockBoard[i][j] == board.CIRCLE {
-// 				circlePositions = append(circlePositions, [2]int{i, j})
-// 			} else if MockBoard[i][j] == board.TRIANGLE {
-// 				trianglePositions = append(trianglePositions, [2]int{i, j})
-// 			}
+			//four pieces in between the different pieces, vertical
+			if i < board.BOARD_SIZE-5 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.TRIANGLE && board.Board[i+5][j] == board.CIRCLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.CIRCLE && board.Board[i+5][j] == board.TRIANGLE {
+					return [][2]int{{i + 1, j}, {i + 2, j}, {i + 3, j}, {i + 4, j}}
+				}
+			}
 
-// 			// Evaluation logic for border and center control
-// 			if MockBoard[i][j] == player {
-// 				if i == 0 || i == board.BOARD_SIZE-1 || j == 0 || j == board.BOARD_SIZE-1 {
-// 					nearBorderCount++
-// 					if (i == 0 && j == 0) || (i == 0 && j == board.BOARD_SIZE-1) || (i == board.BOARD_SIZE-1 && j == 0) || (i == board.BOARD_SIZE-1 && j == board.BOARD_SIZE-1) {
-// 						score -= 2
-// 					} else {
-// 						score -= 1
-// 					}
-// 				}
-// 				if (i >= board.BOARD_SIZE/2-1 && i <= board.BOARD_SIZE/2+1) && (j >= board.BOARD_SIZE/2-1 && j <= board.BOARD_SIZE/2+1) {
-// 					centerControlCount++
-// 					score += 3
-// 				}
-// 			}
-// 		}
-// 	}
+			//********************************************************************************************************************
 
-// 	// Check for adjacent circle and triangle
-// 	for _, circlePos := range circlePositions {
-// 		for _, trianglePos := range trianglePositions {
-// 			if manhattanDistance(circlePos, trianglePos) == 1 {
-// 				// Calculate total Manhattan distance for each type
-// 				circleTotalDistance := calculateTotalDistance(circlePos, circlePositions)
-// 				triangleTotalDistance := calculateTotalDistance(trianglePos, trianglePositions)
+			//upper border four piece
+			if i == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.CIRCLE {
+					return [][2]int{{i, j}, {i + 1, j}, {i + 2, j}, {i + 3, j}}
+				}
+			}
 
-// 				// Decide based on distances
-// 				if circleTotalDistance < triangleTotalDistance {
-// 					if player == board.CIRCLE {
-// 						score += 3 // Favor circles
-// 					} else {
-// 						score -= 3 // Disfavor triangles
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
+			//lower border four piece
+			if i == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE && board.Board[i-2][j] == board.CIRCLE && board.Board[i-3][j] == board.CIRCLE && board.Board[i-4][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE && board.Board[i-2][j] == board.TRIANGLE && board.Board[i-3][j] == board.TRIANGLE && board.Board[i-4][j] == board.CIRCLE {
+					return [][2]int{{i, j}, {i - 1, j}, {i - 2, j}, {i - 3, j}}
+				}
+			}
 
-// 	// Reward calculations for near-border and center
-// 	score += nearBorderCount * 2
-// 	score += centerControlCount * 3
+			// left border four piece
+			if j == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.CIRCLE {
+					return [][2]int{{i, j}, {i, j + 1}, {i, j + 2}, {i, j + 3}}
+				}
+			}
 
-// 	// Finally, return the score based on the number of pieces the player has
-// 	if player == board.TRIANGLE {
-// 		return score + MockTriangleNum*5
-// 	}
-// 	return score + MockCircleNum*5
-// }
+			// right border four piece
+			if j == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE && board.Board[i][j-2] == board.CIRCLE && board.Board[i][j-3] == board.CIRCLE && board.Board[i][j-4] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE && board.Board[i][j-2] == board.TRIANGLE && board.Board[i][j-3] == board.TRIANGLE && board.Board[i][j-4] == board.CIRCLE {
+					return [][2]int{{i, j}, {i, j - 1}, {i, j - 2}, {i, j - 3}}
+				}
+			}
+
+			//upper border three piece
+			if i == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.CIRCLE {
+					return [][2]int{{i, j}, {i + 1, j}, {i + 2, j}}
+				}
+			}
+
+			//lower border three piece
+			if i == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE && board.Board[i-2][j] == board.CIRCLE && board.Board[i-3][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE && board.Board[i-2][j] == board.TRIANGLE && board.Board[i-3][j] == board.CIRCLE {
+					return [][2]int{{i, j}, {i - 1, j}, {i - 2, j}}
+				}
+			}
+
+			// left border three piece
+			if j == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.CIRCLE {
+					return [][2]int{{i, j}, {i, j + 1}, {i, j + 2}}
+				}
+			}
+
+			// right border three piece
+			if j == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE && board.Board[i][j-2] == board.CIRCLE && board.Board[i][j-3] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE && board.Board[i][j-2] == board.TRIANGLE && board.Board[i][j-3] == board.CIRCLE {
+					return [][2]int{{i, j}, {i, j - 1}, {i, j - 2}}
+				}
+			}
+
+			// upper border two piece
+			if i == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.CIRCLE {
+					return [][2]int{{i, j}, {i + 1, j}}
+				}
+			}
+
+			//lower border two piece
+			if i == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE && board.Board[i-2][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE && board.Board[i-2][j] == board.CIRCLE {
+					return [][2]int{{i, j}, {i - 1, j}}
+				}
+			}
+
+			// left border two piece
+			if j == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.CIRCLE {
+					return [][2]int{{i, j}, {i, j + 1}}
+				}
+			}
+
+			// right border two piece
+			if j == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE && board.Board[i][j-2] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE && board.Board[i][j-2] == board.CIRCLE {
+					return [][2]int{{i, j}, {i, j - 1}}
+				}
+			}
+
+			// upper border one piece
+			if i == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE {
+					return [][2]int{{i, j}}
+				}
+			}
+
+			//lower border one piece
+			if i == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.CIRCLE {
+					return [][2]int{{i, j}}
+				}
+			}
+
+			// left border one piece
+			if j == 0 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE {
+					return [][2]int{{i, j}}
+				}
+			}
+
+			// right border one piece
+			if j == board.BOARD_SIZE-1 {
+				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.TRIANGLE ||
+					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.CIRCLE {
+					return [][2]int{{i, j}}
+				}
+			}
+		}
+	}
+
+	return [][2]int{{-1, -1}}
+}

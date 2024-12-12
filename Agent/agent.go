@@ -11,15 +11,13 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-var status bool
-
 func AgentAction(screen tcell.Screen, element board.Element) {
 	// Set the depth of the minimax search (increase for harder AI)
 	const depth = 3
 
 	// Set mock data for Minimax evaluation
 	minimax.MockTurnCounter = game.TurnCounter
-	minimax.MockRoundCounter = board.RoundCounter
+	minimax.MockRoundCounter = board.MoveCounter
 	minimax.MockCurrentPlayer = game.CurrentPlayer
 	minimax.MockCircleNum = board.CircleNum
 	minimax.MockTriangleNum = board.TriangleNum
@@ -35,7 +33,6 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 
 	var bestAction minimax.Action
 	var bestActionList []minimax.Action
-	var evalList []int
 	bestEval := math.MinInt32
 
 	// Evaluate all actions using Minimax
@@ -54,57 +51,15 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 			bestActionList = append(bestActionList, action) // Add to best actions list
 		}
 
-		evalList = append(evalList, eval)
 	}
 
 	// Choose the best action
 	bestAction = bestActionList[rand.Intn(len(bestActionList))]
+
 	time.Sleep(500 * time.Millisecond)
 	game.MoveThePiece(bestAction.FromX, bestAction.FromY, bestAction.ToX, bestAction.ToY, screen)
 
-	// Choose another action if required
-	var otherAction minimax.Action
-	if len(bestActionList) >= 2 {
-		// If there are multiple best actions, pick another from the list
-		for _, action := range bestActionList {
-			if action != bestAction {
-				otherAction = action
-				break
-			}
-		}
-	} else {
-		// Otherwise, pick a random action, ensuring it differs from the best action
-		timeout := time.After(4 * time.Second)
-		timedOut := false
-
-		for {
-			select {
-			case <-timeout:
-				// Timeout fallback: choose the first action different from the best action
-				for _, action := range actions {
-					if action != bestAction && otherAction.FromX != bestAction.ToX || otherAction.FromY != bestAction.ToY {
-						otherAction = action
-						break
-					}
-				}
-				timedOut = true
-			default:
-				otherAction = actions[rand.Intn(len(actions))]
-				if otherAction.FromX != bestAction.FromX || otherAction.FromY != bestAction.FromY &&
-					otherAction.FromX != bestAction.ToX || otherAction.FromY != bestAction.ToY {
-					break
-				}
-			}
-			if timedOut || (otherAction.FromX != bestAction.FromX || otherAction.FromY != bestAction.FromY) {
-				break
-			}
-		}
-	}
-
-	// Execute the additional move
-	time.Sleep(500 * time.Millisecond)
-	game.MoveThePiece(otherAction.FromX, otherAction.FromY, otherAction.ToX, otherAction.ToY, screen)
-
+	AgentAction(screen, element)
 }
 
 // deepCopyBoard creates a new deep copy of the board to simulate moves

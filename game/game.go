@@ -55,10 +55,11 @@ func GetPossibleActions(entity board.Element) []Action {
 	return actionList
 }
 
-func DeathCheck() {
+func DeathCheck(screen tcell.Screen) {
 	deathValues := deathCoordinates()
 	if deathValues[0] != [2]int{-1, -1} {
 		board.RemovePiece(deathValues)
+		board.RenderBoard(screen, CurrentPlayer)
 	}
 }
 
@@ -280,7 +281,6 @@ func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 	mu.Lock()
 
 	board.MovePiece(fromX, fromY, X, Y, screen)
-	board.RenderBoard(screen, X, Y, CurrentPlayer)
 
 	if atomic.LoadInt32(&TurnCounter) == 0 {
 		preMoveMemory = []int{X, Y}
@@ -295,19 +295,23 @@ func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 
 	mu.Unlock()
 
-	if atomic.LoadInt32(&TurnCounter) == 2 {
+	if atomic.LoadInt32(&TurnCounter) >= 2 {
 		atomic.StoreInt32(&TurnCounter, 0)
 		mu.Lock()
 		preMoveMemory = []int{-1, -1}
 
 		if CurrentPlayer == board.CIRCLE {
 			CurrentPlayer = board.TRIANGLE
+
 		} else {
 			CurrentPlayer = board.CIRCLE
-
 		}
 		mu.Unlock()
 	}
+
+	board.MoveCounter++
+
+	board.RenderBoard(screen, CurrentPlayer)
 
 	return true
 }
@@ -340,17 +344,14 @@ func ValidSelectCheck(X, Y int) bool {
 
 func GameOverCheck(screen tcell.Screen) int {
 	if board.CircleNum == 0 {
-		// board.EndGameDisplay("Triangle", screen)
 		return 0
 	}
 
 	if board.TriangleNum == 0 {
-		// board.EndGameDisplay("Circle", screen)
 		return 1
 	}
 
-	if board.RoundCounter == 50 {
-		// board.EndGameDisplay("Draw", screen)
+	if board.MoveCounter == 50 {
 		return -1
 	}
 
