@@ -44,9 +44,9 @@ func playerInteraction(screen tcell.Screen) {
 
 				isSelected = false
 			} else if game.ValidSelectCheck(board.X, board.Y) {
-				// if game.CurrentPlayer == board.CIRCLE {
-				// 	return
-				// }
+				if game.CurrentPlayer == board.CIRCLE {
+					return
+				}
 				// Select the piece if it belongs to the current player
 				fromY, fromX = board.Y, board.X
 				isSelected = true
@@ -81,7 +81,7 @@ func main() {
 
 	var gameStatus int
 
-	wg.Add(3)
+	wg.Add(5)
 
 	go func() {
 		defer wg.Done()
@@ -94,18 +94,6 @@ func main() {
 
 			time.Sleep(100 * time.Millisecond)
 		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		for {
-			if gameOver {
-				return
-			}
-			game.DeathCheck(screen)
-			time.Sleep(100 * time.Millisecond)
-		}
-
 	}()
 
 	go func() {
@@ -129,12 +117,37 @@ func main() {
 				agent.AgentAction(screen, board.CIRCLE)
 			}
 
-			if game.CurrentPlayer == board.TRIANGLE {
-				agent.AgentAction(screen, board.TRIANGLE)
-			}
-			// time.Sleep(100 * time.Millisecond)
+			// if game.CurrentPlayer == board.TRIANGLE {
+			// 	agent.AgentAction(screen, board.TRIANGLE)
+			// }
+
+			time.Sleep(100 * time.Millisecond)
 		}
 
+	}()
+
+	go func() {
+		defer wg.Done()
+		for {
+			if gameOver {
+				return
+			}
+
+			game.DeathCheck(screen)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for {
+			if gameOver {
+				return
+			}
+
+			board.RenderBoard(screen, game.CurrentPlayer)
+			time.Sleep(100 * time.Millisecond)
+		}
 	}()
 
 	wg.Wait()

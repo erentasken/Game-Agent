@@ -101,7 +101,7 @@ func RenderBoard(screen tcell.Screen, currentPlayer Element) {
 }
 
 // Move a piece based on cursor position and input
-func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
+func MovePiece(fromX, fromY, X, Y int) bool {
 	Board[X][Y] = Board[fromX][fromY]
 	Board[fromX][fromY] = EMPTY
 	return true
@@ -109,6 +109,11 @@ func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 
 func RemovePiece(deathValues [][2]int) {
 	for _, v := range deathValues {
+
+		if v == [2]int{-1, -1} {
+			continue
+		}
+
 		if Board[v[0]][v[1]] == TRIANGLE {
 			TriangleNum--
 		} else {

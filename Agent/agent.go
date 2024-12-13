@@ -13,18 +13,9 @@ import (
 
 func AgentAction(screen tcell.Screen, element board.Element) {
 	// Set the depth of the minimax search (increase for harder AI)
-	const depth = 3
+	const depth = 10 ^ 17
 
-	// Set mock data for Minimax evaluation
-	minimax.MockTurnCounter = game.TurnCounter
-	minimax.MockRoundCounter = board.MoveCounter
-	minimax.MockCurrentPlayer = game.CurrentPlayer
-	minimax.MockCircleNum = board.CircleNum
-	minimax.MockTriangleNum = board.TriangleNum
-	minimax.MockFirstMove = game.FirstMove
-
-	// Deep copy the board state to simulate moves
-	deepCopyBoard(board.Board)
+	deepCopyBoard()
 
 	actions := minimax.GetPossibleActions(element)
 	if len(actions) == 0 {
@@ -41,7 +32,9 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 		minimax.MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY)
 
 		// Get the evaluation score for this move
-		eval := minimax.Minimax(depth-1, false, element, &minimax.MockBoard)
+		eval := minimax.Minimax(depth-1, math.MinInt32, math.MaxInt32, false, element)
+
+		deepCopyBoard()
 
 		// Track the best actions
 		if eval > bestEval {
@@ -63,10 +56,16 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 }
 
 // deepCopyBoard creates a new deep copy of the board to simulate moves
-func deepCopyBoard(originalBoard [board.BOARD_SIZE][board.BOARD_SIZE]board.Element) {
+func deepCopyBoard() {
+	minimax.MockTurnCounter = game.TurnCounter
+	minimax.MockMoveCounter = board.MoveCounter
+	minimax.MockCurrentPlayer = game.CurrentPlayer
+	minimax.MockCircleNum = board.CircleNum
+	minimax.MockTriangleNum = board.TriangleNum
+
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
-			minimax.MockBoard[i][j] = originalBoard[i][j]
+			minimax.MockBoard[i][j] = board.Board[i][j]
 		}
 	}
 }
