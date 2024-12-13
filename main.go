@@ -6,7 +6,6 @@ import (
 	"main/board"
 	"main/game"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -39,19 +38,24 @@ func playerInteraction(screen tcell.Screen) {
 			board.RenderBoard(screen, game.CurrentPlayer)
 		case tcell.KeyEnter:
 			if isSelected {
-				// Move the piece
 				game.MoveThePiece(fromX, fromY, board.X, board.Y, screen)
 
+				if game.CurrentPlayer == board.CIRCLE {
+					agent.AgentAction(screen, board.CIRCLE)
+				}
+
 				isSelected = false
+
 			} else if game.ValidSelectCheck(board.X, board.Y) {
 				if game.CurrentPlayer == board.CIRCLE {
 					return
 				}
-				// Select the piece if it belongs to the current player
+
 				fromY, fromX = board.Y, board.X
 				isSelected = true
 			}
 		}
+
 	case *tcell.EventResize:
 		screen.Sync()
 	}
@@ -75,82 +79,17 @@ func main() {
 
 	board.RenderBoard(screen, game.CurrentPlayer)
 
-	var gameOver = false
+	agent.AgentAction(screen, board.CIRCLE)
 
-	var wg sync.WaitGroup
-
-	var gameStatus int
-
-	wg.Add(5)
-
-	go func() {
-		defer wg.Done()
-		for {
-			if gameOver {
-				return
-			}
-
-			playerInteraction(screen)
-
-			time.Sleep(100 * time.Millisecond)
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		for {
-			gameStatus = game.GameOverCheck(screen)
-			if gameStatus != 2 {
-				gameOver = true
-				return
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-	}()
-
-	go func() {
-		for {
-			if gameOver {
-				return
-			}
-			if game.CurrentPlayer == board.CIRCLE {
-				agent.AgentAction(screen, board.CIRCLE)
-			}
-
-			// if game.CurrentPlayer == board.TRIANGLE {
-			// 	agent.AgentAction(screen, board.TRIANGLE)
-			// }
-
-			time.Sleep(100 * time.Millisecond)
+	for {
+		if game.GameOver {
+			break
 		}
 
-	}()
+		playerInteraction(screen)
 
-	go func() {
-		defer wg.Done()
-		for {
-			if gameOver {
-				return
-			}
+		time.Sleep(100 * time.Millisecond)
+	}
 
-			game.DeathCheck(screen)
-			time.Sleep(100 * time.Millisecond)
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		for {
-			if gameOver {
-				return
-			}
-
-			board.RenderBoard(screen, game.CurrentPlayer)
-			time.Sleep(100 * time.Millisecond)
-		}
-	}()
-
-	wg.Wait()
-
-	board.GameOverMessage(screen, gameStatus)
+	board.GameOverMessage(screen)
 }

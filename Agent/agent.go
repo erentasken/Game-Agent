@@ -12,50 +12,42 @@ import (
 )
 
 func AgentAction(screen tcell.Screen, element board.Element) {
-	// Set the depth of the minimax search (increase for harder AI)
 	const depth = 10 ^ 17
 
-	deepCopyBoard()
-
-	actions := minimax.GetPossibleActions(element)
+	actions := game.GetPossibleActions(element)
 	if len(actions) == 0 {
-		return // No possible actions
+		return
 	}
 
-	var bestAction minimax.Action
-	var bestActionList []minimax.Action
+	var bestAction game.Action
+	var bestActionList []game.Action
 	bestEval := math.MinInt32
 
-	// Evaluate all actions using Minimax
 	for _, action := range actions {
-		// Simulate the move
-		minimax.MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY)
-
-		// Get the evaluation score for this move
-		eval := minimax.Minimax(depth-1, math.MinInt32, math.MaxInt32, false, element)
-
 		deepCopyBoard()
 
-		// Track the best actions
+		minimax.MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY)
+
+		eval := minimax.Minimax(depth-1, math.MinInt32, math.MaxInt32, false, element)
+
 		if eval > bestEval {
 			bestEval = eval
-			bestActionList = []minimax.Action{action} // Reset best actions list
+			bestActionList = []game.Action{action}
 		} else if eval == bestEval {
-			bestActionList = append(bestActionList, action) // Add to best actions list
+			bestActionList = append(bestActionList, action)
 		}
 
 	}
 
-	// Choose the best action
 	bestAction = bestActionList[rand.Intn(len(bestActionList))]
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
+
 	game.MoveThePiece(bestAction.FromX, bestAction.FromY, bestAction.ToX, bestAction.ToY, screen)
 
 	AgentAction(screen, element)
 }
 
-// deepCopyBoard creates a new deep copy of the board to simulate moves
 func deepCopyBoard() {
 	minimax.MockTurnCounter = game.TurnCounter
 	minimax.MockMoveCounter = board.MoveCounter

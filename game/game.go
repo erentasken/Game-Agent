@@ -15,6 +15,8 @@ var TurnCounter int32
 
 var CurrentPlayer = board.EMPTY
 
+var GameOver = false
+
 var mu sync.Mutex
 
 type Action struct {
@@ -55,7 +57,7 @@ func GetPossibleActions(entity board.Element) []Action {
 
 func DeathCheck(screen tcell.Screen) {
 	deathValues := deathCoordinates()
-	board.RemovePiece(deathValues)
+	board.RemovePiece(deathValues, screen, CurrentPlayer)
 	board.RenderBoard(screen, CurrentPlayer)
 }
 
@@ -280,7 +282,7 @@ func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 
 	mu.Lock()
 
-	board.MovePiece(fromX, fromY, X, Y)
+	board.MovePiece(fromX, fromY, X, Y, screen, CurrentPlayer)
 
 	if atomic.LoadInt32(&TurnCounter) == 0 {
 		preMoveMemory = []int{X, Y}
@@ -310,6 +312,13 @@ func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 	}
 
 	board.MoveCounter++
+
+	DeathCheck(screen)
+
+	if GameOverCheck(screen) != 2 {
+		GameOver = true
+	}
+
 	return true
 }
 
@@ -341,14 +350,17 @@ func ValidSelectCheck(X, Y int) bool {
 
 func GameOverCheck(screen tcell.Screen) int {
 	if board.CircleNum == 0 {
+		board.GameStatus = 0
 		return 0
 	}
 
 	if board.TriangleNum == 0 {
+		board.GameStatus = 1
 		return 1
 	}
 
 	if board.MoveCounter == 50 {
+		board.GameStatus = -1
 		return -1
 	}
 

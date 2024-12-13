@@ -14,6 +14,8 @@ var CircleNum = 4
 var TriangleNum = 4
 var MoveCounter = 0
 
+var GameStatus = 0
+
 var X, Y = 0, 0
 
 type Element int
@@ -101,13 +103,15 @@ func RenderBoard(screen tcell.Screen, currentPlayer Element) {
 }
 
 // Move a piece based on cursor position and input
-func MovePiece(fromX, fromY, X, Y int) bool {
+func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen, CurrentPlayer Element) bool {
 	Board[X][Y] = Board[fromX][fromY]
 	Board[fromX][fromY] = EMPTY
+
+	RenderBoard(screen, CurrentPlayer)
 	return true
 }
 
-func RemovePiece(deathValues [][2]int) {
+func RemovePiece(deathValues [][2]int, screen tcell.Screen, CurrentPlayer Element) {
 	for _, v := range deathValues {
 
 		if v == [2]int{-1, -1} {
@@ -122,9 +126,10 @@ func RemovePiece(deathValues [][2]int) {
 
 		Board[v[0]][v[1]] = EMPTY
 	}
+	RenderBoard(screen, CurrentPlayer)
 }
 
-func GameOverMessage(screen tcell.Screen, gameStatus int) {
+func GameOverMessage(screen tcell.Screen) {
 	screen.Clear()
 	// Display the game over message
 	gameOverMsg := "Game Over"
@@ -132,11 +137,11 @@ func GameOverMessage(screen tcell.Screen, gameStatus int) {
 		screen.SetContent(i, 0, ch, nil, tcell.StyleDefault)
 	}
 
-	if gameStatus == -1 {
+	if GameStatus == -1 {
 		gameOverMsg = "It's a Draw"
-	} else if gameStatus == 0 {
+	} else if GameStatus == 0 {
 		gameOverMsg = "Triangle Wins"
-	} else if gameStatus == 1 {
+	} else if GameStatus == 1 {
 		gameOverMsg = "Circle Wins"
 	}
 
