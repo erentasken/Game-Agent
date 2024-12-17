@@ -11,49 +11,13 @@ import (
 
 var preMoveMemory = []int{-1, -1}
 
-var TurnCounter int32
+var TurnCounter int32 = 0
 
 var CurrentPlayer = board.EMPTY
 
 var GameOver = false
 
 var mu sync.Mutex
-
-type Action struct {
-	FromX, FromY, ToX, ToY int
-}
-
-func GetPossibleActions(entity board.Element) []Action {
-
-	var actionList []Action
-
-	for i := 0; i < board.BOARD_SIZE; i++ {
-		for j := 0; j < board.BOARD_SIZE; j++ {
-			if board.Board[i][j] == entity {
-				//Move to right
-				if ValidMoveCheck(i, j, i, j+1) {
-					actionList = append(actionList, Action{i, j, i, j + 1})
-				}
-
-				//Move to left
-				if ValidMoveCheck(i, j, i, j-1) {
-					actionList = append(actionList, Action{i, j, i, j - 1})
-				}
-
-				//Move to up
-				if ValidMoveCheck(i, j, i-1, j) {
-					actionList = append(actionList, Action{i, j, i - 1, j})
-				}
-
-				//Move to down
-				if ValidMoveCheck(i, j, i+1, j) {
-					actionList = append(actionList, Action{i, j, i + 1, j})
-				}
-			}
-		}
-	}
-	return actionList
-}
 
 func DeathCheck(screen tcell.Screen) {
 	deathValues := deathCoordinates()
@@ -271,6 +235,7 @@ func deathCoordinates() [][2]int {
 
 func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 	if !ValidMoveCheck(fromX, fromY, X, Y) {
+
 		return false
 	}
 
@@ -304,8 +269,7 @@ func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 
 		if CurrentPlayer == board.CIRCLE {
 			CurrentPlayer = board.TRIANGLE
-
-		} else {
+		} else if CurrentPlayer == board.TRIANGLE {
 			CurrentPlayer = board.CIRCLE
 		}
 		mu.Unlock()
@@ -330,6 +294,12 @@ func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid
 	}
 
 	if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
+
+		// if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY {
+		// 	fmt.Println("zort : ", fromX, fromY, X, Y)
+		// 	os.Exit(0)
+		// }
+
 		return false // Invalid move
 	}
 

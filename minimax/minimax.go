@@ -1,130 +1,176 @@
 package minimax
 
 import (
+	"fmt"
+	"log"
 	"main/board"
+	"main/game"
 	"math"
+	"os"
+	"time"
+
+	"github.com/gdamore/tcell/v2"
+	"golang.org/x/exp/rand"
 )
 
-const (
-	borderPenalty        = -120
-	cornerPenalty        = -150
-	centerReward         = 100
-	pieceCountMultiplier = 800
-	sideBySidePenalty    = -100
-)
+type BoardState struct {
+	Board       [board.BOARD_SIZE][board.BOARD_SIZE]board.Element
+	CircleNum   int
+	TriangleNum int
+}
 
-var SavedMockBoard [board.BOARD_SIZE][board.BOARD_SIZE]board.Element
-var SavedMockTurnCounter int32
-var SavedMockMoveCounter int
-var SavedMockCurrentPlayer board.Element
-var SavedMockCircleNum int
-var SavedMockTriangleNum int
+func AgentAction(screen tcell.Screen, element board.Element) {
+	const depth = 4
 
-func EvaluateBoard(player board.Element) int {
-	var score int
+	actions := GetPossibleActions(element, board.Board)
+	if len(actions) == 0 {
+		return
+	}
 
-	for i := 0; i < board.BOARD_SIZE; i++ {
-		for j := 0; j < board.BOARD_SIZE; j++ {
-			if MockBoard[i][j] == player {
-				if isOnBorder(i, j) {
-					score += borderPenalty
-				}
-				if isOnCorner(i, j) {
-					score += cornerPenalty
-				}
-				if isNearCenter(i, j) {
-					score += centerReward
-				}
+	boardState := BoardState{
+		Board:       board.Board,
+		CircleNum:   board.CircleNum,
+		TriangleNum: board.TriangleNum,
+	}
+
+	var bestActions [2]Action
+	bestEval := math.MinInt32
+
+	var bestFound = false
+
+	var validActions [][2]Action
+
+	for i := 0; i < len(actions); i++ {
+		for j := i + 1; j < len(actions); j++ {
+			action1 := actions[i]
+			action2 := actions[j]
+
+			if (action1.FromX == action2.FromX && action1.FromY == action2.FromY) ||
+				(action1.ToX == action2.ToX && action1.ToY == action2.ToY) ||
+				(action1.ToX == action2.FromX && action1.ToY == action2.FromY) ||
+				(action1.FromX == action2.ToX && action1.FromY == action2.ToY) {
+				continue
 			}
 
-			if (i+1 < board.BOARD_SIZE && MockBoard[i+1][j] == player) ||
-				(j+1 < board.BOARD_SIZE && MockBoard[i][j+1] == player) {
-				score += sideBySidePenalty
+			copyBoardState := CopyBoardState(boardState)
+
+			copyBoardState = MoveThePiece(action1.FromX, action1.FromY, action1.ToX, action1.ToY, copyBoardState)
+
+			copyBoardState = MoveThePiece(action2.FromX, action2.FromY, action2.ToX, action2.ToY, copyBoardState)
+
+			eval := Minimax(depth-1, math.MinInt32, math.MaxInt32, false, copyBoardState, getOpponent(element))
+
+			if eval > bestEval {
+
+				bestFound = true
+				bestEval = eval
+				bestActions = [2]Action{action1, action2}
 			}
+
+			validActions = append(validActions, [2]Action{action1, action2})
 		}
 	}
 
-	if player == board.TRIANGLE {
-		score += MockTriangleNum * pieceCountMultiplier
-	} else {
-		score += MockCircleNum * pieceCountMultiplier
+	if !bestFound {
+		LogError("No valid actions found\n", "./log/valid_combinations.log")
+		// randomly pick a element from validActions
+		randIndex := rand.Intn(len(validActions))
+		bestActions = validActions[randIndex]
 	}
 
-	return score
-}
-
-func isOnBorder(i, j int) bool {
-	return i == 0 || i == board.BOARD_SIZE-1 || j == 0 || j == board.BOARD_SIZE-1
-}
-
-func isOnCorner(i, j int) bool {
-	return (i == 0 && j == 0) || (i == 0 && j == board.BOARD_SIZE-1) ||
-		(i == board.BOARD_SIZE-1 && j == 0) || (i == board.BOARD_SIZE-1 && j == board.BOARD_SIZE-1)
-}
-
-func isNearCenter(i, j int) bool {
-	center := board.BOARD_SIZE / 2
-	return abs(i-center) <= 1 && abs(j-center) <= 1
-}
-
-func abs(x int) int {
-	if x < 0 {
-		return -x
+	for _, action := range bestActions {
+		if bestFound {
+			LogError("\n\nBest action: "+fmt.Sprintf("%v", action)+"\n", "./log/valid_combinations.log")
+		}
+		game.MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY, screen)
+		time.Sleep(200 * time.Millisecond)
 	}
-	return x
 }
 
-func Minimax(depth int, alpha int, beta int, isMaximizing bool, player board.Element) int {
+// Minimax implementation with evaluation and pruning
+func Minimax(depth int, alpha, beta int, isMaximizing bool, boardState BoardState, player board.Element) int {
 	if depth == 0 {
-		return EvaluateBoard(player)
+		return EvaluateBoard(player, boardState)
 	}
 
-	actions := GetPossibleActions(player)
+	actions := GetPossibleActions(player, boardState.Board)
+	if len(actions) == 0 {
+		return EvaluateBoard(player, boardState)
+	}
+
 	if isMaximizing {
-		bestEval := math.MinInt32
-
-		for _, action := range actions {
-			SaveAndMakeMove(action)
-
-			eval := Minimax(depth-1, alpha, beta, false, getOpponent(player))
-
-			restoreMockBoardStates()
-
-			bestEval = Max(bestEval, eval)
-
-			alpha = Max(alpha, bestEval)
-			if beta <= alpha {
-				break
-			}
-		}
-		return bestEval
+		return evaluateActionCombinations(depth, alpha, beta, boardState, actions, true, player, Max)
 	} else {
-		bestEval := math.MaxInt32
-
-		for _, action := range actions {
-			SaveAndMakeMove(action)
-
-			eval := Minimax(depth-1, alpha, beta, true, getOpponent(player))
-
-			restoreMockBoardStates()
-
-			bestEval = Min(bestEval, eval)
-
-			beta = Min(beta, bestEval)
-			if beta <= alpha {
-				break
-			}
-		}
-		return bestEval
+		return evaluateActionCombinations(depth, alpha, beta, boardState, actions, false, player, Min)
 	}
 }
 
-func SaveAndMakeMove(action Action) {
-	saveMockBoardStates()
+// Helper to evaluate combinations of actions
+func evaluateActionCombinations(depth, alpha, beta int, boardState BoardState, actions []Action, isMaximizing bool, player board.Element, compare func(a, b int) int) int {
+	bestEval := func() int {
+		if isMaximizing {
+			return math.MinInt32
+		}
+		return math.MaxInt32
+	}()
 
-	MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY)
+	for i := 0; i < len(actions); i++ {
+		for j := i + 1; j < len(actions); j++ {
+			action1 := actions[i]
+			action2 := actions[j]
+
+			if action1.FromX == action2.FromX && action1.FromY == action2.FromY {
+				continue
+			}
+
+			copyBoardState := CopyBoardState(boardState)
+
+			copyBoardState = MoveThePiece(action1.FromX, action1.FromY, action1.ToX, action1.ToY, copyBoardState)
+			copyBoardState = MoveThePiece(action2.FromX, action2.FromY, action2.ToX, action2.ToY, copyBoardState)
+
+			eval := Minimax(depth-1, alpha, beta, !isMaximizing, copyBoardState, getOpponent(player))
+
+			bestEval = compare(bestEval, eval)
+
+			if isMaximizing {
+				alpha = Max(alpha, bestEval)
+				if beta <= alpha {
+					break // Prune remaining branches
+				}
+			} else {
+				beta = Min(beta, bestEval)
+				if beta <= alpha {
+					break // Prune remaining branches
+				}
+			}
+		}
+	}
+
+	return bestEval
 }
 
+func getOpponent(player board.Element) board.Element {
+	if player == board.TRIANGLE {
+		return board.CIRCLE
+	}
+	return board.TRIANGLE
+}
+
+func LogError(content, filename string) {
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("Error opening file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		log.Printf("Error writing to file: %v", err)
+		return
+	}
+}
+
+// Utility functions
 func Max(a, b int) int {
 	if a > b {
 		return a
@@ -139,39 +185,16 @@ func Min(a, b int) int {
 	return b
 }
 
-func getOpponent(player board.Element) board.Element {
-	if player == board.TRIANGLE {
-		return board.CIRCLE
-	}
-	return board.TRIANGLE
-}
-
-func saveMockBoardStates() {
-	SavedMockTurnCounter = MockTurnCounter
-	SavedMockMoveCounter = MockMoveCounter
-	SavedMockCurrentPlayer = MockCurrentPlayer
-	SavedMockCircleNum = MockCircleNum
-	SavedMockTriangleNum = MockTriangleNum
-
+func CopyBoardState(boardState BoardState) BoardState {
+	var copyBoard [board.BOARD_SIZE][board.BOARD_SIZE]board.Element
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
-			SavedMockBoard[i][j] = MockBoard[i][j]
+			copyBoard[i][j] = boardState.Board[i][j]
 		}
 	}
-
-}
-
-func restoreMockBoardStates() {
-	MockTurnCounter = SavedMockTurnCounter
-	MockMoveCounter = SavedMockMoveCounter
-	MockCurrentPlayer = SavedMockCurrentPlayer
-	MockCircleNum = SavedMockCircleNum
-	MockTriangleNum = SavedMockTriangleNum
-
-	for i := 0; i < board.BOARD_SIZE; i++ {
-		for j := 0; j < board.BOARD_SIZE; j++ {
-			MockBoard[i][j] = SavedMockBoard[i][j]
-		}
+	return BoardState{
+		Board:       copyBoard,
+		CircleNum:   boardState.CircleNum,
+		TriangleNum: boardState.TriangleNum,
 	}
-
 }

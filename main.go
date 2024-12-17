@@ -2,9 +2,9 @@ package main
 
 import (
 	"log"
-	agent "main/Agent"
 	"main/board"
 	"main/game"
+	"main/minimax"
 	"os"
 	"time"
 
@@ -41,7 +41,7 @@ func playerInteraction(screen tcell.Screen) {
 				game.MoveThePiece(fromX, fromY, board.X, board.Y, screen)
 
 				if game.CurrentPlayer == board.CIRCLE {
-					agent.AgentAction(screen, board.CIRCLE)
+					minimax.AgentAction(screen, board.CIRCLE)
 				}
 
 				isSelected = false
@@ -79,7 +79,7 @@ func main() {
 
 	board.RenderBoard(screen, game.CurrentPlayer)
 
-	agent.AgentAction(screen, board.CIRCLE)
+	minimax.AgentAction(screen, board.CIRCLE)
 
 	for {
 		if game.GameOver {

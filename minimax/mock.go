@@ -2,83 +2,38 @@ package minimax
 
 import (
 	"main/board"
-	"math"
-	"sync/atomic"
 )
 
-var MockBoard [7][7]board.Element
+func MoveThePiece(fromX, fromY, X, Y int, boardState BoardState) BoardState {
+	boardState.Board[X][Y] = boardState.Board[fromX][fromY]
+	boardState.Board[fromX][fromY] = board.EMPTY
 
-var MockTurnCounter int32
-var MockMoveCounter = 0
-var MockCurrentPlayer = board.EMPTY
-var MockCircleNum = 0
-var MockTriangleNum = 0
+	boardState = DeathCheck(boardState)
 
-var preMoveMemory = []int{-1, -1}
-
-func MoveThePiece(fromX, fromY, X, Y int) bool {
-	if !ValidMoveCheck(fromX, fromY, X, Y) {
-		return false
-	}
-
-	if MockTurnCounter == 1 {
-		if preMoveMemory[0] == fromX && preMoveMemory[1] == fromY {
-			return false
-		}
-	}
-
-	MockBoard[X][Y] = MockBoard[fromX][fromY]
-	MockBoard[fromX][fromY] = board.EMPTY
-
-	if atomic.LoadInt32(&MockTurnCounter) == 0 {
-		preMoveMemory = []int{X, Y}
-	}
-
-	if MockCurrentPlayer == board.CIRCLE && MockCircleNum == 1 ||
-		MockCurrentPlayer == board.TRIANGLE && MockTriangleNum == 1 {
-		MockTurnCounter++
-	}
-
-	MockTurnCounter++
-
-	if MockTurnCounter >= 2 {
-		MockTurnCounter = 0
-
-		preMoveMemory = []int{-1, -1}
-
-		if MockCurrentPlayer == board.CIRCLE {
-			MockCurrentPlayer = board.TRIANGLE
-		} else {
-			MockCurrentPlayer = board.CIRCLE
-		}
-	}
-
-	MockMoveCounter++
-
-	DeathCheck()
-
-	return true
+	return boardState
 }
 
-func DeathCheck() {
-	deathValues := deathCoordinates()
+func DeathCheck(boardState BoardState) BoardState {
+	deathValues := deathCoordinates(boardState.Board)
 
 	for _, v := range deathValues {
 		if v == [2]int{-1, -1} {
 			continue
 		}
 
-		if MockBoard[v[0]][v[1]] == board.TRIANGLE {
-			MockTriangleNum--
+		if boardState.Board[v[0]][v[1]] == board.TRIANGLE {
+			boardState.TriangleNum--
 		} else {
-			MockCircleNum--
+			boardState.CircleNum--
 		}
 
-		MockBoard[v[0]][v[1]] = board.EMPTY
+		boardState.Board[v[0]][v[1]] = board.EMPTY
 	}
+
+	return boardState
 }
 
-func deathCoordinates() [][2]int {
+func deathCoordinates(MockBoard [7][7]board.Element) [][2]int {
 
 	var result [][2]int // Initialize the result list to store coordinates
 
@@ -290,52 +245,30 @@ type Action struct {
 	FromX, FromY, ToX, ToY int
 }
 
-func GetPossibleActions(entity board.Element) []Action {
+func GetPossibleActions(entity board.Element, MockBoard [7][7]board.Element) []Action {
 	var actionList []Action
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
 			if MockBoard[i][j] == entity {
-				// Move to right
-				if ValidMoveCheck(i, j, i, j+1) {
+
+				if j < board.BOARD_SIZE-1 && MockBoard[i][j+1] == board.EMPTY {
 					actionList = append(actionList, Action{i, j, i, j + 1})
 				}
 
-				// Move to left
-				if ValidMoveCheck(i, j, i, j-1) {
+				if j > 0 && MockBoard[i][j-1] == board.EMPTY {
 					actionList = append(actionList, Action{i, j, i, j - 1})
 				}
 
-				// Move up
-				if ValidMoveCheck(i, j, i-1, j) {
+				if i > 0 && MockBoard[i-1][j] == board.EMPTY {
 					actionList = append(actionList, Action{i, j, i - 1, j})
 				}
 
-				// Move down
-				if ValidMoveCheck(i, j, i+1, j) {
+				if i < board.BOARD_SIZE-1 && MockBoard[i+1][j] == board.EMPTY {
 					actionList = append(actionList, Action{i, j, i + 1, j})
 				}
 			}
 		}
 	}
 	return actionList
-}
-
-func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid move
-	var targetDist = math.Abs(float64(X-fromX)) + math.Abs(float64(Y-fromY))
-
-	if Y < 0 || Y >= board.BOARD_SIZE || X < 0 || X >= board.BOARD_SIZE {
-		return false // Out of bounds
-	}
-
-	if MockBoard[fromX][fromY] == board.EMPTY || MockBoard[X][Y] != board.EMPTY || targetDist >= 2 {
-		return false // Invalid move
-	}
-
-	if MockBoard[fromX][fromY] == board.CIRCLE && MockCurrentPlayer == board.TRIANGLE ||
-		MockBoard[fromX][fromY] == board.TRIANGLE && MockCurrentPlayer == board.CIRCLE {
-		return false
-	}
-
-	return true
 }
