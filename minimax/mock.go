@@ -35,14 +35,13 @@ func DeathCheck(boardState BoardState) BoardState {
 
 func deathCoordinates(MockBoard [7][7]board.Element) [][2]int {
 
-	var result [][2]int // Initialize the result list to store coordinates
+	var result [][2]int
 
 	result = append(result, [2]int{-1, -1})
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
 
-			//a piece in between the different pieces, horizontal
 			if j < board.BOARD_SIZE-2 {
 				if MockBoard[i][j] == board.TRIANGLE && MockBoard[i][j+1] == board.CIRCLE && MockBoard[i][j+2] == board.TRIANGLE ||
 					MockBoard[i][j] == board.CIRCLE && MockBoard[i][j+1] == board.TRIANGLE && MockBoard[i][j+2] == board.CIRCLE {

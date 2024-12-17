@@ -73,7 +73,6 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 
 	if !bestFound {
 		LogError("No valid actions found\n", "./log/valid_combinations.log")
-		// randomly pick a element from validActions
 		randIndex := rand.Intn(len(validActions))
 		bestActions = validActions[randIndex]
 	}
@@ -87,7 +86,6 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 	}
 }
 
-// Minimax implementation with evaluation and pruning
 func Minimax(depth int, alpha, beta int, isMaximizing bool, boardState BoardState, player board.Element) int {
 	if depth == 0 {
 		return EvaluateBoard(player, boardState)
@@ -105,7 +103,6 @@ func Minimax(depth int, alpha, beta int, isMaximizing bool, boardState BoardStat
 	}
 }
 
-// Helper to evaluate combinations of actions
 func evaluateActionCombinations(depth, alpha, beta int, boardState BoardState, actions []Action, isMaximizing bool, player board.Element, compare func(a, b int) int) int {
 	bestEval := func() int {
 		if isMaximizing {
@@ -135,12 +132,12 @@ func evaluateActionCombinations(depth, alpha, beta int, boardState BoardState, a
 			if isMaximizing {
 				alpha = Max(alpha, bestEval)
 				if beta <= alpha {
-					break // Prune remaining branches
+					break
 				}
 			} else {
 				beta = Min(beta, bestEval)
 				if beta <= alpha {
-					break // Prune remaining branches
+					break
 				}
 			}
 		}
@@ -170,7 +167,6 @@ func LogError(content, filename string) {
 	}
 }
 
-// Utility functions
 func Max(a, b int) int {
 	if a > b {
 		return a

@@ -6,15 +6,14 @@ import (
 
 const (
 	borderPenalty        = -50
-	cornerPenalty        = -150 // More significant for corner
-	pieceCountMultiplier = 1000 // Balanced weight for piece count
-	centerControlBonus   = 200  // Add more reward for center control
+	cornerPenalty        = -150
+	pieceCountMultiplier = 1000
+	centerControlBonus   = 200
 )
 
 func EvaluateBoard(player board.Element, boardState BoardState) int {
 	score := 0
 
-	// Positional evaluation
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
 			if boardState.Board[i][j] == player {
@@ -24,21 +23,19 @@ func EvaluateBoard(player board.Element, boardState BoardState) int {
 				if isOnCorner(i, j) {
 					score += cornerPenalty
 				}
-				score += evaluateControl(i, j) // New heuristic
+				score += evaluateControl(i, j)
 			}
 		}
 	}
 
-	// Piece count evaluation
 	if player == board.TRIANGLE {
 		score += boardState.TriangleNum * pieceCountMultiplier
 	} else {
 		score += boardState.CircleNum * pieceCountMultiplier
 	}
 
-	// Winning condition
 	if player == board.TRIANGLE && boardState.CircleNum == 0 {
-		score += int(1e9) // Arbitrary large value for a win
+		score += int(1e9)
 	} else if player == board.CIRCLE && boardState.TriangleNum == 0 {
 		score += int(1e9)
 	}
