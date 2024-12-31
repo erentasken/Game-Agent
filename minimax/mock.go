@@ -10,6 +10,7 @@ func MoveThePiece(fromX, fromY, X, Y int, boardState BoardState) BoardState {
 
 	boardState = DeathCheck(boardState)
 
+	boardState.MoveCounter++
 	return boardState
 }
 

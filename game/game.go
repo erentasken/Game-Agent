@@ -286,21 +286,15 @@ func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
 	return true
 }
 
-func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid move
+func ValidMoveCheck(fromX, fromY, X, Y int) bool {
 	var targetDist = math.Abs(float64(X-fromX)) + math.Abs(float64(Y-fromY))
 
 	if Y < 0 || Y >= board.BOARD_SIZE || X < 0 || X >= board.BOARD_SIZE {
-		return false // Out of bounds
+		return false
 	}
 
 	if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
-
-		// if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY {
-		// 	fmt.Println("zort : ", fromX, fromY, X, Y)
-		// 	os.Exit(0)
-		// }
-
-		return false // Invalid move
+		return false
 	}
 
 	mu.Lock()

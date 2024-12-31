@@ -79,6 +79,7 @@ func main() {
 
 	board.RenderBoard(screen, game.CurrentPlayer)
 
+	//Initial agent action.
 	minimax.AgentAction(screen, board.CIRCLE)
 
 	for {

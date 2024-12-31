@@ -34,7 +34,6 @@ var element = map[Element]string{
 
 var Board [BOARD_SIZE][BOARD_SIZE]Element
 
-// Initialize the board with predefined positions
 func CreateBoard() {
 	for i := 0; i < BOARD_SIZE; i++ {
 		for j := 0; j < BOARD_SIZE; j++ {
@@ -51,21 +50,19 @@ func CreateBoard() {
 
 func RenderBoard(screen tcell.Screen, currentPlayer Element) {
 	screen.Clear()
-	cellWidth := 2 // Fixed width for each cell to maintain alignment
+	cellWidth := 2
 
 	for i := 0; i < BOARD_SIZE; i++ {
 		for j := 0; j < BOARD_SIZE; j++ {
 			ch := element[Board[i][j]]
 			style := tcell.StyleDefault
 
-			// Alternate background color for the checkerboard pattern
 			if (i+j)%2 == 0 {
 				style = style.Background(tcell.ColorDarkGreen)
 			} else {
 				style = style.Background(tcell.ColorDarkBlue)
 			}
 
-			// Highlight the cursor's square
 			if i == X && j == Y {
 				style = style.Background(tcell.ColorGray)
 			}
@@ -78,7 +75,6 @@ func RenderBoard(screen tcell.Screen, currentPlayer Element) {
 				style = style.Foreground(tcell.ColorYellow)
 			}
 
-			// Set cell content with proper padding
 			runes := []rune(ch)
 			screen.SetContent(j*cellWidth, i, runes[0], nil, style.Foreground(tcell.ColorYellow))
 			for k := 1; k < cellWidth; k++ {
@@ -87,22 +83,24 @@ func RenderBoard(screen tcell.Screen, currentPlayer Element) {
 		}
 	}
 
-	// Display the current player's turn
 	info := "Turn: " + element[currentPlayer]
 	for i, r := range info {
 		screen.SetContent(i, BOARD_SIZE+1, r, nil, tcell.StyleDefault)
 	}
 
-	// Display the move counter
 	info = "Move Counter: " + strconv.Itoa(MoveCounter)
 	for i, r := range info {
 		screen.SetContent(i, BOARD_SIZE+2, r, nil, tcell.StyleDefault)
 	}
 
+	info = "Press ESC for exit."
+	for i, r := range info {
+		screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
+	}
+
 	screen.Show()
 }
 
-// Move a piece based on cursor position and input
 func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen, CurrentPlayer Element) bool {
 	Board[X][Y] = Board[fromX][fromY]
 	Board[fromX][fromY] = EMPTY
@@ -131,7 +129,6 @@ func RemovePiece(deathValues [][2]int, screen tcell.Screen, CurrentPlayer Elemen
 
 func GameOverMessage(screen tcell.Screen) {
 	screen.Clear()
-	// Display the game over message
 	gameOverMsg := "Game Over"
 	for i, ch := range gameOverMsg {
 		screen.SetContent(i, 0, ch, nil, tcell.StyleDefault)
@@ -163,7 +160,7 @@ func GameOverMessage(screen tcell.Screen) {
 		case *tcell.EventKey:
 			switch ev.Key() {
 			case tcell.KeyEscape:
-				return // Exit on ESC
+				return
 			}
 		}
 	}

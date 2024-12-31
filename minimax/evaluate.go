@@ -5,10 +5,10 @@ import (
 )
 
 const (
-	borderPenalty        = -50
-	cornerPenalty        = -150
+	borderPenalty        = 100
+	cornerPenalty        = 150
 	pieceCountMultiplier = 1000
-	centerControlBonus   = 200
+	// centerControlBonus   = 200
 )
 
 func EvaluateBoard(player board.Element, boardState BoardState) int {
@@ -16,14 +16,14 @@ func EvaluateBoard(player board.Element, boardState BoardState) int {
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
-			if boardState.Board[i][j] == player {
+			if boardState.Board[i][j] == getOpponent(player) {
 				if isOnBorder(i, j) {
 					score += borderPenalty
 				}
 				if isOnCorner(i, j) {
 					score += cornerPenalty
 				}
-				score += evaluateControl(i, j)
+				// score += evaluateControl(i, j)
 			}
 		}
 	}
@@ -40,20 +40,24 @@ func EvaluateBoard(player board.Element, boardState BoardState) int {
 		score += int(1e9)
 	}
 
+	if boardState.MoveCounter == 50 {
+		score = 0
+	}
+
 	return score
 }
 
-func evaluateControl(i, j int) int {
-	center := board.BOARD_SIZE / 2
-	return -(abs(i-center) + abs(j-center)) * centerControlBonus
-}
+// func evaluateControl(i, j int) int {
+// 	center := board.BOARD_SIZE / 2
+// 	return -(abs(i-center) + abs(j-center)) * centerControlBonus
+// }
 
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
+// func abs(x int) int {
+// 	if x < 0 {
+// 		return -x
+// 	}
+// 	return x
+// }
 
 func isOnBorder(i, j int) bool {
 	return i == 0 || i == board.BOARD_SIZE-1 || j == 0 || j == board.BOARD_SIZE-1
