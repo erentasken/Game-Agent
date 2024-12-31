@@ -3,62 +3,33 @@ package game
 import (
 	"main/board"
 	"math"
+	"sync"
+	"sync/atomic"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-var preMoveMemory = []int{0, 0}
+var preMoveMemory = []int{-1, -1}
 
-var firstMove = true
-
-var turnCounter = 0 // its for per move for each player game logic.
+var TurnCounter int32 = 0
 
 var CurrentPlayer = board.EMPTY
 
-type Action struct {
-	FromX, FromY, ToX, ToY int
-}
+var GameOver = false
 
-func GetPossibleActions(entity board.Element) []Action {
+var mu sync.Mutex
 
-	var actionList []Action
-
-	for i := 0; i < board.BOARD_SIZE; i++ {
-		for j := 0; j < board.BOARD_SIZE; j++ {
-			if board.Board[i][j] == entity {
-				//Move to right
-				if ValidMoveCheck(i, j, i, j+1) {
-					actionList = append(actionList, Action{i, j, i, j + 1})
-				}
-
-				//Move to left
-				if ValidMoveCheck(i, j, i, j-1) {
-					actionList = append(actionList, Action{i, j, i, j - 1})
-				}
-
-				//Move to up
-				if ValidMoveCheck(i, j, i-1, j) {
-					actionList = append(actionList, Action{i, j, i - 1, j})
-				}
-
-				//Move to down
-				if ValidMoveCheck(i, j, i+1, j) {
-					actionList = append(actionList, Action{i, j, i + 1, j})
-				}
-			}
-		}
-	}
-	return actionList
-}
-
-func DeathCheck() {
+func DeathCheck(screen tcell.Screen) {
 	deathValues := deathCoordinates()
-	if deathValues[0] != [2]int{-1, -1} {
-		board.RemovePiece(deathValues)
-	}
+	board.RemovePiece(deathValues, screen, CurrentPlayer)
+	board.RenderBoard(screen, CurrentPlayer)
 }
 
 func deathCoordinates() [][2]int {
+
+	var result [][2]int // Initialize the result list to store coordinates
+
+	result = append(result, [2]int{-1, -1})
 
 	for i := 0; i < board.BOARD_SIZE; i++ {
 		for j := 0; j < board.BOARD_SIZE; j++ {
@@ -67,7 +38,7 @@ func deathCoordinates() [][2]int {
 			if j < board.BOARD_SIZE-2 {
 				if board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.TRIANGLE ||
 					board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.CIRCLE {
-					return [][2]int{{i, j + 1}}
+					result = append(result, [2]int{i, j + 1})
 				}
 			}
 
@@ -75,7 +46,7 @@ func deathCoordinates() [][2]int {
 			if i < board.BOARD_SIZE-2 {
 				if board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.CIRCLE {
-					return [][2]int{{i + 1, j}}
+					result = append(result, [2]int{i + 1, j})
 				}
 			}
 
@@ -83,7 +54,7 @@ func deathCoordinates() [][2]int {
 			if j < board.BOARD_SIZE-3 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.CIRCLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.TRIANGLE {
-					return [][2]int{{i, j + 1}, {i, j + 2}}
+					result = append(result, [2]int{i, j + 1}, [2]int{i, j + 2})
 				}
 			}
 
@@ -91,7 +62,7 @@ func deathCoordinates() [][2]int {
 			if i < board.BOARD_SIZE-3 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.CIRCLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.TRIANGLE {
-					return [][2]int{{i + 1, j}, {i + 2, j}}
+					result = append(result, [2]int{i + 1, j}, [2]int{i + 2, j})
 				}
 			}
 
@@ -99,7 +70,7 @@ func deathCoordinates() [][2]int {
 			if j < board.BOARD_SIZE-4 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.CIRCLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.TRIANGLE {
-					return [][2]int{{i, j + 1}, {i, j + 2}, {i, j + 3}}
+					result = append(result, [2]int{i, j + 1}, [2]int{i, j + 2}, [2]int{i, j + 3})
 				}
 			}
 
@@ -107,7 +78,7 @@ func deathCoordinates() [][2]int {
 			if i < board.BOARD_SIZE-4 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.CIRCLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.TRIANGLE {
-					return [][2]int{{i + 1, j}, {i + 2, j}, {i + 3, j}}
+					result = append(result, [2]int{i + 1, j}, [2]int{i + 2, j}, [2]int{i + 3, j})
 				}
 			}
 
@@ -115,7 +86,7 @@ func deathCoordinates() [][2]int {
 			if j < board.BOARD_SIZE-5 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.TRIANGLE && board.Board[i][j+5] == board.CIRCLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.CIRCLE && board.Board[i][j+5] == board.TRIANGLE {
-					return [][2]int{{i, j + 1}, {i, j + 2}, {i, j + 3}, {i, j + 4}}
+					result = append(result, [2]int{i, j + 1}, [2]int{i, j + 2}, [2]int{i, j + 3}, [2]int{i, j + 4})
 				}
 			}
 
@@ -123,7 +94,7 @@ func deathCoordinates() [][2]int {
 			if i < board.BOARD_SIZE-5 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.TRIANGLE && board.Board[i+5][j] == board.CIRCLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.CIRCLE && board.Board[i+5][j] == board.TRIANGLE {
-					return [][2]int{{i + 1, j}, {i + 2, j}, {i + 3, j}, {i + 4, j}}
+					result = append(result, [2]int{i + 1, j}, [2]int{i + 2, j}, [2]int{i + 3, j}, [2]int{i + 4, j})
 				}
 			}
 
@@ -133,7 +104,7 @@ func deathCoordinates() [][2]int {
 			if i == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.CIRCLE && board.Board[i+4][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.TRIANGLE && board.Board[i+4][j] == board.CIRCLE {
-					return [][2]int{{i, j}, {i + 1, j}, {i + 2, j}, {i + 3, j}}
+					result = append(result, [2]int{i, j}, [2]int{i + 1, j}, [2]int{i + 2, j}, [2]int{i + 3, j})
 				}
 			}
 
@@ -141,7 +112,7 @@ func deathCoordinates() [][2]int {
 			if i == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE && board.Board[i-2][j] == board.CIRCLE && board.Board[i-3][j] == board.CIRCLE && board.Board[i-4][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE && board.Board[i-2][j] == board.TRIANGLE && board.Board[i-3][j] == board.TRIANGLE && board.Board[i-4][j] == board.CIRCLE {
-					return [][2]int{{i, j}, {i - 1, j}, {i - 2, j}, {i - 3, j}}
+					result = append(result, [2]int{i, j}, [2]int{i - 1, j}, [2]int{i - 2, j}, [2]int{i - 3, j})
 				}
 			}
 
@@ -149,7 +120,7 @@ func deathCoordinates() [][2]int {
 			if j == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.CIRCLE && board.Board[i][j+4] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.TRIANGLE && board.Board[i][j+4] == board.CIRCLE {
-					return [][2]int{{i, j}, {i, j + 1}, {i, j + 2}, {i, j + 3}}
+					result = append(result, [2]int{i, j}, [2]int{i, j + 1}, [2]int{i, j + 2}, [2]int{i, j + 3})
 				}
 			}
 
@@ -157,7 +128,7 @@ func deathCoordinates() [][2]int {
 			if j == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE && board.Board[i][j-2] == board.CIRCLE && board.Board[i][j-3] == board.CIRCLE && board.Board[i][j-4] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE && board.Board[i][j-2] == board.TRIANGLE && board.Board[i][j-3] == board.TRIANGLE && board.Board[i][j-4] == board.CIRCLE {
-					return [][2]int{{i, j}, {i, j - 1}, {i, j - 2}, {i, j - 3}}
+					result = append(result, [2]int{i, j}, [2]int{i, j - 1}, [2]int{i, j - 2}, [2]int{i, j - 3})
 				}
 			}
 
@@ -165,7 +136,7 @@ func deathCoordinates() [][2]int {
 			if i == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.CIRCLE && board.Board[i+3][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.TRIANGLE && board.Board[i+3][j] == board.CIRCLE {
-					return [][2]int{{i, j}, {i + 1, j}, {i + 2, j}}
+					result = append(result, [2]int{i, j}, [2]int{i + 1, j}, [2]int{i + 2, j})
 				}
 			}
 
@@ -173,7 +144,7 @@ func deathCoordinates() [][2]int {
 			if i == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE && board.Board[i-2][j] == board.CIRCLE && board.Board[i-3][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE && board.Board[i-2][j] == board.TRIANGLE && board.Board[i-3][j] == board.CIRCLE {
-					return [][2]int{{i, j}, {i - 1, j}, {i - 2, j}}
+					result = append(result, [2]int{i, j}, [2]int{i - 1, j}, [2]int{i - 2, j})
 				}
 			}
 
@@ -181,7 +152,7 @@ func deathCoordinates() [][2]int {
 			if j == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.CIRCLE && board.Board[i][j+3] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.TRIANGLE && board.Board[i][j+3] == board.CIRCLE {
-					return [][2]int{{i, j}, {i, j + 1}, {i, j + 2}}
+					result = append(result, [2]int{i, j}, [2]int{i, j + 1}, [2]int{i, j + 2})
 				}
 			}
 
@@ -189,7 +160,7 @@ func deathCoordinates() [][2]int {
 			if j == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE && board.Board[i][j-2] == board.CIRCLE && board.Board[i][j-3] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE && board.Board[i][j-2] == board.TRIANGLE && board.Board[i][j-3] == board.CIRCLE {
-					return [][2]int{{i, j}, {i, j - 1}, {i, j - 2}}
+					result = append(result, [2]int{i, j}, [2]int{i, j - 1}, [2]int{i, j - 2})
 				}
 			}
 
@@ -197,7 +168,7 @@ func deathCoordinates() [][2]int {
 			if i == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.CIRCLE && board.Board[i+2][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.TRIANGLE && board.Board[i+2][j] == board.CIRCLE {
-					return [][2]int{{i, j}, {i + 1, j}}
+					result = append(result, [2]int{i, j}, [2]int{i + 1, j})
 				}
 			}
 
@@ -205,7 +176,7 @@ func deathCoordinates() [][2]int {
 			if i == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.CIRCLE && board.Board[i-2][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.TRIANGLE && board.Board[i-2][j] == board.CIRCLE {
-					return [][2]int{{i, j}, {i - 1, j}}
+					result = append(result, [2]int{i, j}, [2]int{i - 1, j})
 				}
 			}
 
@@ -213,7 +184,7 @@ func deathCoordinates() [][2]int {
 			if j == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.CIRCLE && board.Board[i][j+2] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.TRIANGLE && board.Board[i][j+2] == board.CIRCLE {
-					return [][2]int{{i, j}, {i, j + 1}}
+					result = append(result, [2]int{i, j}, [2]int{i, j + 1})
 				}
 			}
 
@@ -221,7 +192,7 @@ func deathCoordinates() [][2]int {
 			if j == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.CIRCLE && board.Board[i][j-2] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.TRIANGLE && board.Board[i][j-2] == board.CIRCLE {
-					return [][2]int{{i, j}, {i, j - 1}}
+					result = append(result, [2]int{i, j}, [2]int{i, j - 1})
 				}
 			}
 
@@ -229,7 +200,7 @@ func deathCoordinates() [][2]int {
 			if i == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i+1][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i+1][j] == board.CIRCLE {
-					return [][2]int{{i, j}}
+					result = append(result, [2]int{i, j})
 				}
 			}
 
@@ -237,7 +208,7 @@ func deathCoordinates() [][2]int {
 			if i == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i-1][j] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i-1][j] == board.CIRCLE {
-					return [][2]int{{i, j}}
+					result = append(result, [2]int{i, j})
 				}
 			}
 
@@ -245,7 +216,7 @@ func deathCoordinates() [][2]int {
 			if j == 0 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j+1] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j+1] == board.CIRCLE {
-					return [][2]int{{i, j}}
+					result = append(result, [2]int{i, j})
 				}
 			}
 
@@ -253,115 +224,109 @@ func deathCoordinates() [][2]int {
 			if j == board.BOARD_SIZE-1 {
 				if board.Board[i][j] == board.CIRCLE && board.Board[i][j-1] == board.TRIANGLE ||
 					board.Board[i][j] == board.TRIANGLE && board.Board[i][j-1] == board.CIRCLE {
-					return [][2]int{{i, j}}
+					result = append(result, [2]int{i, j})
 				}
 			}
 		}
 	}
 
-	return [][2]int{{-1, -1}}
+	return result
 }
 
 func MoveThePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
-	if CurrentPlayer == board.EMPTY {
-		switch board.Board[fromX][fromY] {
-		case board.CIRCLE:
-			CurrentPlayer = board.CIRCLE
-		case board.TRIANGLE:
-			CurrentPlayer = board.TRIANGLE
-		}
-	}
+	if !ValidMoveCheck(fromX, fromY, X, Y) {
 
-	if ValidMoveCheck(fromX, fromY, X, Y) && sequentialMoveCheck(X, Y, fromX, fromY) {
-		board.MovePiece(fromX, fromY, X, Y, screen)
-		board.RenderBoard(screen, X, Y, CurrentPlayer)
-
-		switchTurnControl()
-		return true
-	} else {
 		return false
 	}
 
+	if atomic.LoadInt32(&TurnCounter) == 1 {
+		if preMoveMemory[0] == fromX && preMoveMemory[1] == fromY {
+			return false
+		}
+	}
+
+	mu.Lock()
+
+	board.MovePiece(fromX, fromY, X, Y, screen, CurrentPlayer)
+
+	if atomic.LoadInt32(&TurnCounter) == 0 {
+		preMoveMemory = []int{X, Y}
+	}
+
+	if CurrentPlayer == board.CIRCLE && board.CircleNum == 1 ||
+		CurrentPlayer == board.TRIANGLE && board.TriangleNum == 1 {
+		atomic.AddInt32(&TurnCounter, 1)
+	}
+
+	atomic.AddInt32(&TurnCounter, 1)
+
+	mu.Unlock()
+
+	if atomic.LoadInt32(&TurnCounter) >= 2 {
+		atomic.StoreInt32(&TurnCounter, 0)
+		mu.Lock()
+		preMoveMemory = []int{-1, -1}
+
+		if CurrentPlayer == board.CIRCLE {
+			CurrentPlayer = board.TRIANGLE
+		} else if CurrentPlayer == board.TRIANGLE {
+			CurrentPlayer = board.CIRCLE
+		}
+		mu.Unlock()
+	}
+
+	board.MoveCounter++
+
+	DeathCheck(screen)
+
+	if GameOverCheck(screen) != 2 {
+		GameOver = true
+	}
+
+	return true
 }
 
-func ValidMoveCheck(fromX, fromY, X, Y int) bool { // checks location-wise valid move
+func ValidMoveCheck(fromX, fromY, X, Y int) bool {
 	var targetDist = math.Abs(float64(X-fromX)) + math.Abs(float64(Y-fromY))
 
 	if Y < 0 || Y >= board.BOARD_SIZE || X < 0 || X >= board.BOARD_SIZE {
-		return false // Out of bounds
-	}
-
-	if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
-		return false // Invalid move
-	}
-	return true
-}
-
-func sequentialMoveCheck(X, Y, selectedX, selectedY int) bool { // can't move already played piece
-	if firstMove {
-		preMoveMemory[0] = X
-		preMoveMemory[1] = Y
-		firstMove = false
-		return true
-	}
-
-	if preMoveMemory[0] == selectedX && preMoveMemory[1] == selectedY {
 		return false
 	}
 
+	if board.Board[fromX][fromY] == board.EMPTY || board.Board[X][Y] != board.EMPTY || targetDist >= 2 {
+		return false
+	}
+
+	mu.Lock()
+	if board.Board[fromX][fromY] == board.CIRCLE && CurrentPlayer == board.TRIANGLE ||
+		board.Board[fromX][fromY] == board.TRIANGLE && CurrentPlayer == board.CIRCLE {
+		mu.Unlock()
+		return false
+	}
+	mu.Unlock()
+
 	return true
-}
-
-func switchTurnControl() {
-	if board.CircleNum == 1 && CurrentPlayer == board.CIRCLE {
-		CurrentPlayer = board.TRIANGLE
-		turnCounter += 2
-		board.RoundCounter++
-		firstMove = true
-
-		return
-	}
-
-	if board.TriangleNum == 1 && CurrentPlayer == board.TRIANGLE {
-		CurrentPlayer = board.CIRCLE
-		turnCounter += 2
-		board.RoundCounter++
-		firstMove = true
-		return
-	}
-
-	turnCounter++
-	board.RoundCounter++
-
-	if turnCounter%2 == 0 {
-		if CurrentPlayer == board.TRIANGLE {
-			CurrentPlayer = board.CIRCLE
-		} else {
-			CurrentPlayer = board.TRIANGLE
-		}
-		firstMove = true
-	}
 }
 
 func ValidSelectCheck(X, Y int) bool {
 	return board.Board[X][Y] != board.EMPTY && board.Board[X][Y] == CurrentPlayer
 }
 
-func GameOverCheck(screen tcell.Screen) bool {
+func GameOverCheck(screen tcell.Screen) int {
 	if board.CircleNum == 0 {
-		board.EndGameDisplay("Triangle", screen)
-		return true
+		board.GameStatus = 0
+		return 0
 	}
 
 	if board.TriangleNum == 0 {
-		board.EndGameDisplay("Circle", screen)
-		return true
+		board.GameStatus = 1
+		return 1
 	}
 
-	if board.RoundCounter == 50 {
-		board.EndGameDisplay("Draw", screen)
-		return true
+	if board.MoveCounter == 50 {
+		board.GameStatus = -1
+		return -1
 	}
 
-	return false
+	return 2
 }

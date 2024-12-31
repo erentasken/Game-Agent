@@ -2,15 +2,15 @@ package main
 
 import (
 	"log"
-	agent "main/Agent"
 	"main/board"
 	"main/game"
+	"main/minimax"
 	"os"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-var Y, X = 0, 0
 var fromY, fromX int
 var isSelected = false
 
@@ -23,28 +23,39 @@ func playerInteraction(screen tcell.Screen) {
 			os.Exit(0) // Exit the program
 		}
 
-		if game.CurrentPlayer == board.TRIANGLE {
-			switch ev.Key() {
-			case tcell.KeyUp:
-				X = (X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
-			case tcell.KeyDown:
-				X = (X + 1) % board.BOARD_SIZE
-			case tcell.KeyLeft:
-				Y = (Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
-			case tcell.KeyRight:
-				Y = (Y + 1) % board.BOARD_SIZE
-			case tcell.KeyEnter:
-				if isSelected {
-					// Move the piece
-					game.MoveThePiece(fromX, fromY, X, Y, screen)
-					isSelected = false
-				} else if game.ValidSelectCheck(X, Y) {
-					// Select the piece if it belongs to the current player
-					fromY, fromX = Y, X
-					isSelected = true
+		switch ev.Key() {
+		case tcell.KeyUp:
+			board.X = (board.X - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
+		case tcell.KeyDown:
+			board.X = (board.X + 1) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
+		case tcell.KeyLeft:
+			board.Y = (board.Y - 1 + board.BOARD_SIZE) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
+		case tcell.KeyRight:
+			board.Y = (board.Y + 1) % board.BOARD_SIZE
+			board.RenderBoard(screen, game.CurrentPlayer)
+		case tcell.KeyEnter:
+			if isSelected {
+				game.MoveThePiece(fromX, fromY, board.X, board.Y, screen)
+
+				if game.CurrentPlayer == board.CIRCLE {
+					minimax.AgentAction(screen, board.CIRCLE)
 				}
+
+				isSelected = false
+
+			} else if game.ValidSelectCheck(board.X, board.Y) {
+				if game.CurrentPlayer == board.CIRCLE {
+					return
+				}
+
+				fromY, fromX = board.Y, board.X
+				isSelected = true
 			}
 		}
+
 	case *tcell.EventResize:
 		screen.Sync()
 	}
@@ -63,25 +74,23 @@ func main() {
 	}
 
 	board.CreateBoard()
-	board.RenderBoard(screen, X, Y, game.CurrentPlayer)
 
 	game.CurrentPlayer = board.CIRCLE
 
+	board.RenderBoard(screen, game.CurrentPlayer)
+
+	//Initial agent action.
+	minimax.AgentAction(screen, board.CIRCLE)
+
 	for {
-
-		board.RenderBoard(screen, X, Y, game.CurrentPlayer)
-		playerInteraction(screen)
-
-		if game.CurrentPlayer == board.CIRCLE {
-			agent.AgentAction(screen, board.CIRCLE)
+		if game.GameOver {
+			break
 		}
 
-		// if game.CurrentPlayer == board.TRIANGLE {
-		// 	agent.AgentAction(screen, board.TRIANGLE)
-		// }
+		playerInteraction(screen)
 
-		game.DeathCheck()
-
-		game.GameOverCheck(screen)
+		time.Sleep(100 * time.Millisecond)
 	}
+
+	board.GameOverMessage(screen)
 }

@@ -1,7 +1,6 @@
 package board
 
 import (
-	"os"
 	"strconv"
 
 	"github.com/gdamore/tcell/v2"
@@ -13,7 +12,11 @@ const (
 
 var CircleNum = 4
 var TriangleNum = 4
-var RoundCounter = 0
+var MoveCounter = 0
+
+var GameStatus = 0
+
+var X, Y = 0, 0
 
 type Element int
 
@@ -31,7 +34,6 @@ var element = map[Element]string{
 
 var Board [BOARD_SIZE][BOARD_SIZE]Element
 
-// Initialize the board with predefined positions
 func CreateBoard() {
 	for i := 0; i < BOARD_SIZE; i++ {
 		for j := 0; j < BOARD_SIZE; j++ {
@@ -46,36 +48,33 @@ func CreateBoard() {
 	}
 }
 
-func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
+func RenderBoard(screen tcell.Screen, currentPlayer Element) {
 	screen.Clear()
-	cellWidth := 2 // Fixed width for each cell to maintain alignment
+	cellWidth := 2
 
 	for i := 0; i < BOARD_SIZE; i++ {
 		for j := 0; j < BOARD_SIZE; j++ {
 			ch := element[Board[i][j]]
 			style := tcell.StyleDefault
 
-			// Alternate background color for the checkerboard pattern
 			if (i+j)%2 == 0 {
 				style = style.Background(tcell.ColorDarkGreen)
 			} else {
 				style = style.Background(tcell.ColorDarkBlue)
 			}
 
-			// Highlight the cursor's square
 			if i == X && j == Y {
 				style = style.Background(tcell.ColorGray)
 			}
 
-			// if Board[i][j] == currentPlayer {
-			// 	style = style.Foreground(tcell.ColorYellow)
-			// }
-
-			if Board[i][j] == CIRCLE && Board[i][j] == TRIANGLE {
+			if Board[i][j] == currentPlayer {
 				style = style.Foreground(tcell.ColorYellow)
 			}
 
-			// Set cell content with proper padding
+			if Board[i][j] == CIRCLE || Board[i][j] == TRIANGLE {
+				style = style.Foreground(tcell.ColorYellow)
+			}
+
 			runes := []rune(ch)
 			screen.SetContent(j*cellWidth, i, runes[0], nil, style.Foreground(tcell.ColorYellow))
 			for k := 1; k < cellWidth; k++ {
@@ -84,30 +83,39 @@ func RenderBoard(screen tcell.Screen, X, Y int, currentPlayer Element) {
 		}
 	}
 
-	// Display the current player's turn
 	info := "Turn: " + element[currentPlayer]
 	for i, r := range info {
 		screen.SetContent(i, BOARD_SIZE+1, r, nil, tcell.StyleDefault)
 	}
 
-	// Display the move counter
-	info = "Move Counter: " + strconv.Itoa(RoundCounter)
+	info = "Move Counter: " + strconv.Itoa(MoveCounter)
 	for i, r := range info {
 		screen.SetContent(i, BOARD_SIZE+2, r, nil, tcell.StyleDefault)
+	}
+
+	info = "Press ESC for exit."
+	for i, r := range info {
+		screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
 	}
 
 	screen.Show()
 }
 
-// Move a piece based on cursor position and input
-func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen) bool {
+func MovePiece(fromX, fromY, X, Y int, screen tcell.Screen, CurrentPlayer Element) bool {
 	Board[X][Y] = Board[fromX][fromY]
 	Board[fromX][fromY] = EMPTY
+
+	RenderBoard(screen, CurrentPlayer)
 	return true
 }
 
-func RemovePiece(deathValues [][2]int) {
+func RemovePiece(deathValues [][2]int, screen tcell.Screen, CurrentPlayer Element) {
 	for _, v := range deathValues {
+
+		if v == [2]int{-1, -1} {
+			continue
+		}
+
 		if Board[v[0]][v[1]] == TRIANGLE {
 			TriangleNum--
 		} else {
@@ -116,62 +124,45 @@ func RemovePiece(deathValues [][2]int) {
 
 		Board[v[0]][v[1]] = EMPTY
 	}
+	RenderBoard(screen, CurrentPlayer)
 }
 
-func EndGameDisplay(info string, screen tcell.Screen) {
-	switch info {
-	case "Triangle":
-		info := "TRIANGLE WINS!, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
+func GameOverMessage(screen tcell.Screen) {
+	screen.Clear()
+	gameOverMsg := "Game Over"
+	for i, ch := range gameOverMsg {
+		screen.SetContent(i, 0, ch, nil, tcell.StyleDefault)
+	}
 
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return // Exit on ESC
-				}
-			}
-		}
-	case "Circle":
-		info := "CIRCLE WINS!, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
+	if GameStatus == -1 {
+		gameOverMsg = "It's a Draw"
+	} else if GameStatus == 0 {
+		gameOverMsg = "Triangle Wins"
+	} else if GameStatus == 1 {
+		gameOverMsg = "Circle Wins"
+	}
 
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return // Exit on ESC
-				}
-			}
-		}
-	case "Draw":
-		info := "It's a Draw!, GAME OVER"
-		for i, r := range info {
-			screen.SetContent(i, BOARD_SIZE+3, r, nil, tcell.StyleDefault)
-		}
-		screen.Show()
+	for i, ch := range gameOverMsg {
+		screen.SetContent(i, 1, ch, nil, tcell.StyleDefault)
+	}
 
-		os.Exit(0)
+	gameOverMsg = "Press ESC to exit"
 
-		for {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					return // Exit on ESC
-				}
+	for i, ch := range gameOverMsg {
+		screen.SetContent(i, 2, ch, nil, tcell.StyleDefault)
+	}
+
+	screen.Show()
+
+	for {
+		ev := screen.PollEvent()
+		switch ev := ev.(type) {
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyEscape:
+				return
 			}
 		}
 	}
+
 }
