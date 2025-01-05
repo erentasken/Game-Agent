@@ -53,6 +53,8 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 
 			eval := Minimax(depth-1, math.MinInt32, math.MaxInt32, false, copyBoardState, getOpponent(element))
 
+			LogError(fmt.Sprintf("%v score : %d\n", action, eval), "./log/valid_combinations.log")
+
 			if eval > bestEval {
 				bestFound = true
 				bestEval = eval
@@ -82,8 +84,9 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 
 				eval := Minimax(depth-1, math.MinInt32, math.MaxInt32, false, copyBoardState, getOpponent(element))
 
-				if eval > bestEval {
+				LogError(fmt.Sprintf("%v %v score : %d\n", action1, action2, eval), "./log/valid_combinations.log")
 
+				if eval > bestEval {
 					bestFound = true
 					bestEval = eval
 					bestActions = [2]Action{action1, action2}
@@ -102,7 +105,7 @@ func AgentAction(screen tcell.Screen, element board.Element) {
 
 	for _, action := range bestActions {
 		if bestFound {
-			LogError("\n\nBest action: "+fmt.Sprintf("%v", action)+"\n", "./log/valid_combinations.log")
+			LogError("\n\nBest action: "+fmt.Sprintf("%v : score %d", action, bestEval)+"\n", "./log/valid_combinations.log")
 		}
 		game.MoveThePiece(action.FromX, action.FromY, action.ToX, action.ToY, screen)
 		time.Sleep(350 * time.Millisecond)
